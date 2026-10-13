@@ -1,0 +1,71 @@
+create table site_blocks (
+  id bigserial primary key,
+  kind varchar(32) not null,
+  slug varchar(80),
+  title varchar(255) not null,
+  subtitle varchar(500),
+  body text,
+  image_url varchar(500),
+  link_url varchar(500),
+  cta_label varchar(80),
+  meta varchar(120),
+  display_order int not null default 0,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index idx_site_blocks_kind on site_blocks (kind, display_order, id);
+create unique index uk_site_blocks_page_slug on site_blocks (slug) where kind = 'PAGE' and slug is not null;
+
+insert into shop_settings (setting_key, setting_value, updated_at) values
+  ('logoUrl', 'assets/logo-dibidani.png', now()),
+  ('topbarText', 'Livraison rapide à Bamako', now()),
+  ('heroLocation', 'BAMAKO', now()),
+  ('heroLocationSub', 'et environs', now()),
+  ('floatingBanner', 'Votre marché livré chez vous', now()),
+  ('navPromoLabel', 'Promotions', now()),
+  ('footerAbout', 'Le marché qui vient à vous.', now()),
+  ('footerCopyright', '© 2026 Dibidani. Tous droits réservés.', now()),
+  ('testimonialsTitle', 'Témoignages', now()),
+  ('testimonialsSubtitle', 'Ce que disent nos clients à Bamako', now()),
+  ('partnersTitle', 'Nos partenaires', now()),
+  ('partnersSubtitle', 'Marques et services disponibles à Dibidani', now())
+on conflict (setting_key) do nothing;
+
+insert into site_blocks (kind, slug, title, subtitle, body, image_url, link_url, cta_label, meta, display_order, active) values
+  ('HERO', null, 'Le grand marché de Bamako, à portée de main', null,
+   'Commandez vos produits du marché en ligne et recevez-les facilement chez vous, au bureau ou partout à Bamako.',
+   'assets/hero-market.jpg', '/category/all', 'Découvrir nos offres', null, 1, true),
+  ('HERO', null, 'Pièces auto et moto au meilleur prix', null,
+   'Batteries, huiles et filtres des meilleures marques, livrés en 24 h à Bamako.',
+   'assets/hero-market.jpg', '/category/pieces-detachees', 'Voir les pièces', null, 2, true),
+  ('HERO', null, 'Passez à l''énergie solaire', null,
+   'Kits solaires et équipements électriques pour la maison et le commerce.',
+   'assets/hero-market.jpg', '/category/energie-solaire', 'Je m''équipe', null, 3, true),
+  ('TESTIMONIAL', null, 'Aminata Traoré', 'Hamdallaye, Bamako',
+   'La perceuse est arrivée le lendemain. Paiement Orange Money, sans file d''attente au marché.',
+   null, null, null, 'AT', 1, true),
+  ('TESTIMONIAL', null, 'Moussa Diallo', 'Badalabougou, Bamako',
+   'Je commande le riz et l''huile depuis mon bureau. Livraison soignée, prix du marché.',
+   null, null, null, 'MD', 2, true),
+  ('TESTIMONIAL', null, 'Fatoumata Coulibaly', 'ACI 2000, Bamako',
+   'Le kit solaire a été livré chez moi. Le vendeur a répondu tout de suite sur WhatsApp.',
+   null, null, null, 'FC', 3, true),
+  ('PARTNER', null, 'Samsung', 'Électronique', null, null, null, null, '#1428a0', 1, true),
+  ('PARTNER', null, 'Bosch', 'Outillage', null, null, null, null, '#ea0016', 2, true),
+  ('PARTNER', null, 'TotalEnergies', 'Lubrifiants', null, null, null, null, '#dd2c00', 3, true),
+  ('PARTNER', null, 'Varta', 'Batteries', null, null, null, null, '#0b6b3a', 4, true),
+  ('PARTNER', null, 'Orange Money', 'Paiement', null, null, null, null, '#ff7900', 5, true),
+  ('PARTNER', null, 'Moov Money', 'Paiement', null, null, null, null, '#0066b3', 6, true),
+  ('PARTNER', null, 'Wave', 'Paiement', null, null, null, null, '#1dc4c4', 7, true),
+  ('PARTNER', null, 'Electro Mali', 'Vendeur', null, null, null, null, '#087a47', 8, true),
+  ('PAGE', 'a-propos', 'À propos de Dibidani', 'Le marché de Bamako, en ligne',
+   'Dibidani rapproche le marché de Bamako de chez vous : pièces, quincaillerie, alimentation, électronique et énergie solaire, livrés rapidement.',
+   null, null, null, null, 1, true),
+  ('PAGE', 'livraison', 'Livraison', 'Bamako et environs',
+   'Nous livrons à Bamako et dans les communes environnantes. Le tarif dépend du quartier. Le retrait au point relais est aussi possible.',
+   null, null, null, null, 2, true),
+  ('PAGE', 'faq', 'Questions fréquentes', 'Aide Dibidani',
+   'Vous pouvez payer par Orange Money, Moov Money, Wave, carte ou à la livraison. Pour suivre une commande, utilisez le numéro reçu par SMS ou e-mail.',
+   null, null, null, null, 3, true);

@@ -1,0 +1,3 @@
+package ml.dibidani.domain;
+
+public enum AdPosition { HOME_HERO, HOME_TOP, HOME_MIDDLE, HOME_BOTTOM, CATEGORY_TOP, CATEGORY_MIDDLE, PRODUCT_SIDEBAR, CART, CHECKOUT }

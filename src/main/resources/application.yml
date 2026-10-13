@@ -1,0 +1,131 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/dibidani}
+    username: ${DB_USER:dibidani}
+    password: ${DB_PASSWORD:dibidani}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        default_batch_fetch_size: 50
+  flyway:
+    enabled: true
+  jackson:
+    datatype:
+      datetime:
+        write-dates-as-timestamps: false
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${MAIL_SMTP_AUTH:true}
+      mail.smtp.starttls.enable: ${MAIL_SMTP_STARTTLS:true}
+  servlet:
+    multipart:
+      max-file-size: 12MB
+      max-request-size: 14MB
+server:
+  port: ${SERVER_PORT:8080}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  health:
+    mail:
+      enabled: false
+app:
+  # URL publique du site (QR codes, liens de suivi, retours de paiement).
+  public-url: ${PUBLIC_URL:http://localhost:4200}
+  orders:
+    # Délai avant annulation automatique d'une commande en attente de paiement en ligne.
+    payment-timeout-hours: ${ORDER_PAYMENT_TIMEOUT_HOURS:48}
+  payments:
+    mock:
+      # Passerelle de test : ne jamais activer en production.
+      enabled: ${PAYMENT_MOCK_ENABLED:true}
+      webhook-secret: ${PAYMENT_MOCK_WEBHOOK_SECRET:}
+    orange-money:
+      base-url: ${ORANGE_MONEY_BASE_URL:https://api.orange.com}
+      webpay-path: ${ORANGE_MONEY_WEBPAY_PATH:}
+      client-id: ${ORANGE_MONEY_CLIENT_ID:}
+      client-secret: ${ORANGE_MONEY_CLIENT_SECRET:}
+      merchant-key: ${ORANGE_MONEY_MERCHANT_KEY:}
+      currency: ${ORANGE_MONEY_CURRENCY:XOF}
+    moov-money:
+      base-url: ${MOOV_MONEY_BASE_URL:}
+      initiate-path: ${MOOV_MONEY_INITIATE_PATH:}
+      merchant-id: ${MOOV_MONEY_MERCHANT_ID:}
+      api-key: ${MOOV_MONEY_API_KEY:}
+      webhook-secret: ${MOOV_MONEY_WEBHOOK_SECRET:}
+  jwt:
+    # Minimum 32 octets. En production, JWT_SECRET est obligatoire (pas de valeur par défaut dans docker-compose).
+    secret: ${JWT_SECRET:dibidani-dev-only-secret-key-change-me-not-for-prod}
+  cors-origins: ${CORS_ORIGINS:http://localhost:4200,http://localhost,http://localhost:80}
+  seed:
+    enabled: ${SEED_DEMO_DATA:true}
+  search:
+    provider: ${SEARCH_PROVIDER:postgres}
+  uploads:
+    dir: ${UPLOADS_DIR:uploads}
+    public-prefix: /uploads
+  photo-studio:
+    engine: ${PHOTO_STUDIO_ENGINE:local}
+    service-url: ${PHOTO_STUDIO_URL:http://127.0.0.1:8090}
+    token: ${PHOTO_STUDIO_TOKEN:}
+    max-bytes: 12582912
+    quota-per-user: ${PHOTO_STUDIO_QUOTA:200}
+    supplier-lookup-enabled: ${PHOTO_STUDIO_SUPPLIER_LOOKUP:false}
+  shop:
+    name: Dibidani
+    slogan: Le marché qui vient à vous
+    phone: ${SHOP_PHONE:+223 76 12 34 56}
+    whatsapp: ${SHOP_WHATSAPP:+223 76 12 34 56}
+    email: ${SHOP_EMAIL:contact@dibidani.ml}
+    address: ${SHOP_ADDRESS:Marché de Dibidani, Commune III}
+    city: Bamako
+    opening-hours: ${SHOP_OPENING_HOURS:Lun - Sam, 8h - 20h}
+    delivery-fee: ${SHOP_DELIVERY_FEE:2500}
+    free-delivery-threshold: ${SHOP_FREE_DELIVERY_THRESHOLD:100000}
+    facebook-url: ${SHOP_FACEBOOK_URL:https://www.facebook.com/dibidani}
+    instagram-url: ${SHOP_INSTAGRAM_URL:}
+    tiktok-url: ${SHOP_TIKTOK_URL:https://www.tiktok.com/@dibidani}
+  social:
+    mock-enabled: ${SOCIAL_MOCK_ENABLED:true}
+    facebook:
+      page-id: ${FACEBOOK_PAGE_ID:}
+      page-access-token: ${FACEBOOK_PAGE_ACCESS_TOKEN:}
+    tiktok:
+      access-token: ${TIKTOK_ACCESS_TOKEN:}
+    whatsapp:
+      cloud-phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
+      cloud-access-token: ${WHATSAPP_ACCESS_TOKEN:}
+      twilio-account-sid: ${TWILIO_ACCOUNT_SID:}
+      twilio-auth-token: ${TWILIO_AUTH_TOKEN:}
+      twilio-from: ${TWILIO_WHATSAPP_FROM:}
+      publish-to: ${WHATSAPP_PUBLISH_TO:}
+  oauth:
+    mock-enabled: ${AUTH_OAUTH_MOCK_ENABLED:true}
+    google:
+      client-id: ${GOOGLE_OAUTH_CLIENT_ID:}
+      client-secret: ${GOOGLE_OAUTH_CLIENT_SECRET:}
+    facebook:
+      app-id: ${FACEBOOK_APP_ID:}
+      app-secret: ${FACEBOOK_APP_SECRET:}
+  mail:
+    from: ${MAIL_FROM:contact@dibidani.ml}
+    from-name: ${MAIL_FROM_NAME:Dibidani}
+    mock-enabled: ${MAIL_MOCK_ENABLED:true}
+  sms-gateway:
+    base-url: ${SMS_GATEWAY_BASE_URL:https://api.sms-gate.app/3rdparty/v1}
+    username: ${SMS_GATEWAY_USERNAME:}
+    password: ${SMS_GATEWAY_PASSWORD:}
+    token: ${SMS_GATEWAY_TOKEN:}
+    device-id: ${SMS_GATEWAY_DEVICE_ID:}
+    sim-number: ${SMS_GATEWAY_SIM_NUMBER:}
+    mock-enabled: ${SMS_GATEWAY_MOCK_ENABLED:true}

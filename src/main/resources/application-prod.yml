@@ -1,0 +1,27 @@
+spring:
+  jpa:
+    properties:
+      hibernate:
+        format_sql: false
+server:
+  forward-headers-strategy: framework
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+app:
+  seed:
+    enabled: false
+  payments:
+    mock:
+      enabled: false
+  mail:
+    mock-enabled: false
+  sms-gateway:
+    mock-enabled: false

@@ -1,0 +1,17 @@
+# API seule en production derrière un reverse proxy externe.
+# PostgreSQL n'a aucun port publié. Préférer la stack complète du dossier parent.
+name: dibidani-api
+
+services:
+  db:
+    ports: !reset []
+    restart: unless-stopped
+
+  backend:
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SEED_DEMO_DATA: "false"
+      PAYMENT_MOCK_ENABLED: "false"
+      CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required in production}
+      PUBLIC_URL: ${PUBLIC_URL:?PUBLIC_URL is required in production}
