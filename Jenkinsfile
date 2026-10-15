@@ -10,15 +10,15 @@ pipeline {
     booleanParam(name: 'RUN_TESTS', defaultValue: true, description: 'Exécuter les tests Maven')
     booleanParam(name: 'DEPLOY', defaultValue: true, description: 'Déployer après le build')
     choice(name: 'DEPLOY_MODE', choices: ['hub', 'ssh', 'same-host'], description: 'hub : Docker Hub + compose pull sur le VPS. ssh : docker save. same-host : Jenkins sur le serveur.')
-    string(name: 'DEPLOY_PATH', defaultValue: '/opt', description: 'Dossier du compose VPS (docker-compose.yml + docker-compose.dibidani.yml + .env)')
-    string(name: 'DEPLOY_HOST', defaultValue: '', description: 'Hôte SSH si hub/ssh, ex. root@vps')
+    string(name: 'DEPLOY_PATH', defaultValue: '/home/adminubuntu/OliveApps', description: 'Dossier du compose VPS (docker-compose.yml + docker-compose.dibidani.yml + .env)')
+    string(name: 'DEPLOY_HOST', defaultValue: 'adminubuntu@dibidani.com', description: 'Hôte SSH si hub/ssh, ex. root@vps')
   }
   environment {
     REGISTRY = 'oliverqueen18'
     IMAGE_NAME = 'dibidani-backend'
     COMPOSE_SERVICE = 'backend-dibidani'
     COMPOSE_FILES = '-f docker-compose.yml -f docker-compose.dibidani.yml'
-    SSH_CREDENTIALS_ID = 'dibidani-deploy-ssh'
+    SSH_CREDENTIALS_ID = 'ssh-server-credentials'
     DOCKERHUB_CREDENTIALS_ID = 'dockerhub-credentials'
   }
   stages {

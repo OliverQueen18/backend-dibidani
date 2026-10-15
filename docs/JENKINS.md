@@ -21,7 +21,7 @@ Le Jenkinsfile est à la racine de chaque dépôt. Intégration VPS : [VPS.md](V
 |---|---|---|
 | (GitHub) | PAT / GitHub App | Checkout |
 | `dockerhub-credentials` | Username/password | `docker push` |
-| `dibidani-deploy-ssh` | SSH Username with private key | `compose pull` sur le VPS |
+| `ssh-server-credentials` | SSH Username with private key | `compose pull` sur le VPS |
 
 ## Jobs
 
