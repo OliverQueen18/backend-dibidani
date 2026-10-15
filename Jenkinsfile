@@ -113,6 +113,7 @@ void remoteComposePull() {
   writeFile file: 'remote-deploy.sh', text: remotePullScript()
   withSsh {
     sh """
+      scp -i "\$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new docs/docker-compose.dibidani.yml ${params.DEPLOY_HOST}:${params.DEPLOY_PATH}/docker-compose.dibidani.yml
       ssh -i "\$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new ${params.DEPLOY_HOST} 'bash -s' < remote-deploy.sh
     """
   }
@@ -136,11 +137,18 @@ if [ ! -f docker-compose.dibidani.yml ]; then
   exit 1
 fi
 ${waitContainerFn()}
+awk -v k='DIBIDANI_BACKEND_TAG' -v v='${env.IMAGE_TAG}' '
+  BEGIN { f=0 }
+  \$0 ~ "^" k "=" { print k "=" v; f=1; next }
+  { print }
+  END { if (!f) print k "=" v }
+' .env > .env.tmp && mv .env.tmp .env
+export DIBIDANI_BACKEND_TAG='${env.IMAGE_TAG}'
 docker compose ${env.COMPOSE_FILES} pull postgres-dibidani ${env.COMPOSE_SERVICE}
 docker compose ${env.COMPOSE_FILES} up -d postgres-dibidani
 wait_container postgres-dibidani 24
 docker compose ${env.COMPOSE_FILES} pull image-studio-dibidani && docker compose ${env.COMPOSE_FILES} up -d image-studio-dibidani || echo "image-studio absent sur Docker Hub — l'API continue (cadrage local)."
-docker compose ${env.COMPOSE_FILES} up -d --no-deps --force-recreate ${env.COMPOSE_SERVICE}
+docker compose ${env.COMPOSE_FILES} up -d --no-deps --force-recreate --pull always ${env.COMPOSE_SERVICE}
 wait_container dibidani-backend 48
 """
 }

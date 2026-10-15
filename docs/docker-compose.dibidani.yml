@@ -62,7 +62,7 @@ services:
           - image-studio
 
   backend-dibidani:
-    image: oliverqueen18/dibidani-backend:${DIBIDANI_TAG:-latest}
+    image: oliverqueen18/dibidani-backend:${DIBIDANI_BACKEND_TAG:-${DIBIDANI_TAG:-latest}}
     container_name: dibidani-backend
     restart: unless-stopped
     expose:
@@ -155,7 +155,7 @@ services:
           - backend
 
   frontend-dibidani:
-    image: oliverqueen18/dibidani-frontend:${DIBIDANI_TAG:-latest}
+    image: oliverqueen18/dibidani-frontend:${DIBIDANI_FRONTEND_TAG:-${DIBIDANI_TAG:-latest}}
     container_name: dibidani-frontend
     restart: unless-stopped
     expose:

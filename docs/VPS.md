@@ -41,6 +41,8 @@ cat > data/vhost.d/dibidani.com <<'EOF'
 client_max_body_size 14m;
 proxy_read_timeout 120s;
 proxy_send_timeout 120s;
+proxy_cache off;
+add_header Cache-Control "no-store" always;
 EOF
 cp data/vhost.d/dibidani.com data/vhost.d/www.dibidani.com
 ```
