@@ -7,14 +7,15 @@ RUN mvn -q -DskipTests package \
     && cp "$JAR" /tmp/app.jar
 
 FROM eclipse-temurin:21-jre-alpine
-RUN apk add --no-cache wget \
+RUN apk add --no-cache wget su-exec \
     && addgroup -S dibidani && adduser -S dibidani -G dibidani \
     && mkdir -p /app/uploads && chown -R dibidani:dibidani /app
 WORKDIR /app
 COPY --from=build /tmp/app.jar app.jar
-USER dibidani
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod 755 /docker-entrypoint.sh
 EXPOSE 8080
 ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
 HEALTHCHECK --interval=20s --timeout=5s --start-period=50s --retries=5 \
   CMD wget -qO- http://127.0.0.1:8080/actuator/health | grep -q '"status":"UP"' || exit 1
-ENTRYPOINT ["sh","-c","java $JAVA_OPTS -jar /app/app.jar"]
+ENTRYPOINT ["/docker-entrypoint.sh"]

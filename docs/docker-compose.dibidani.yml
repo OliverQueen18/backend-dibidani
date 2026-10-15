@@ -4,6 +4,7 @@
 #
 # DNS : A/AAAA dibidani.com et www.dibidani.com → IP du VPS
 # Uploads : le Nginx du frontend reverse-proxie /api et /uploads vers backend:8080
+# nginx-proxy limite à 1 Mo par défaut : Jenkins pose data/vhost.d/dibidani.com (32m).
 # (alias réseau). L’API n’est pas exposée sur internet.
 
 services:

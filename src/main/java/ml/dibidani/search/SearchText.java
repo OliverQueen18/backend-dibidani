@@ -13,7 +13,18 @@ public final class SearchText {
   private SearchText() {}
 
   public static List<String> terms(String q) {
-    return Arrays.stream(Slugs.normalize(q).split("\\s+")).filter(t -> !t.isBlank()).limit(6).toList();
+    return Arrays.stream(Slugs.normalize(q).split("\\s+"))
+        .filter(t -> !t.isBlank())
+        .map(SearchText::singular)
+        .distinct()
+        .limit(6)
+        .toList();
+  }
+
+  /** « perceuses » doit encore matcher « perceuse ». */
+  static String singular(String t) {
+    if (t.length() >= 5 && t.endsWith("s") && !t.endsWith("ss")) return t.substring(0, t.length() - 1);
+    return t;
   }
 
   public static String contains(String term) { return "%" + escape(term) + "%"; }

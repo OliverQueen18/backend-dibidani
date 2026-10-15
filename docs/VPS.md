@@ -34,17 +34,12 @@ chmod 777 uploads/dibidani
 
 `DIBIDANI_UPLOAD_HOST_PATH=./uploads/dibidani` (monté dans les conteneurs sur `/app/uploads`).
 
-- vhost nginx-proxy (uploads jusqu’à 14 Mo) :
+- vhost nginx-proxy (uploads jusqu’à 32 Mo). Sans ce fichier, nginx-proxy refuse tout fichier > 1 Mo (erreur 413). Jenkins le recopie au déploiement :
 
 ```bash
-cat > data/vhost.d/dibidani.com <<'EOF'
-client_max_body_size 14m;
-proxy_read_timeout 120s;
-proxy_send_timeout 120s;
-proxy_cache off;
-add_header Cache-Control "no-store" always;
-EOF
-cp data/vhost.d/dibidani.com data/vhost.d/www.dibidani.com
+cp nginx-proxy-vhost.dibidani.conf data/vhost.d/dibidani.com
+cp nginx-proxy-vhost.dibidani.conf data/vhost.d/www.dibidani.com
+docker exec nginx-proxy nginx -s reload
 ```
 
 ## 3. DNS

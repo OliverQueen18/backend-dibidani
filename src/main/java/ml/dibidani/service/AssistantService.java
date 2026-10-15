@@ -20,11 +20,16 @@ public class AssistantService {
   private static final List<String> HELLO = List.of(
       "bonjour", "salut", "hello", "bonsoir", "hey", "coucou", "i ni ce", "i ni sogoma", "i ni wula");
   private static final List<String> STOP = List.of(
-      "je", "j", "tu", "il", "on", "nous", "vous", "un", "une", "des", "le", "la", "les", "de", "du", "d",
-      "au", "aux", "en", "et", "ou", "mon", "ma", "mes", "moi", "me", "y", "a", "à", "pour", "avec",
-      "svp", "sil", "s", "te", "plait", "plaît", "voudrais", "veux", "chercher", "cherche", "rechercher",
-      "recherche", "trouver", "trouve", "montre", "donner", "donne", "besoin", "produit", "produits",
-      "article", "articles", "sest", "est", "ce", "cet", "cette");
+      "je", "j", "tu", "il", "ils", "elle", "elles", "on", "nous", "vous", "un", "une", "des", "le", "la",
+      "les", "de", "du", "d", "au", "aux", "en", "et", "ou", "mon", "ma", "mes", "moi", "me", "y", "a",
+      "pour", "avec", "sans", "sur", "dans", "par", "pas", "plus", "tres", "svp", "stp", "sil", "s", "te",
+      "plait", "voudrais", "veux", "voulez", "peux", "peut", "pouvez", "chercher", "cherche", "rechercher",
+      "recherche", "trouver", "trouve", "montre", "montrer", "donner", "donne", "besoin", "produit",
+      "produits", "article", "articles", "sest", "est", "es", "suis", "sont", "sommes", "etes", "avez",
+      "avons", "ont", "ai", "as", "ce", "cet", "cette", "ces", "que", "qui", "quoi", "dont", "quand", "si",
+      "ici", "aussi", "alors", "donc", "voila", "euh", "hum", "ben", "bah", "hein", "oui", "non", "merci",
+      "bonjour", "salut", "hello", "bonsoir", "dibidani", "assistant", "cela", "ca", "votre", "vos", "notre",
+      "nos", "leur", "leurs", "avoir", "etre", "fait", "faire", "dis", "dites", "voir", "aimerais");
   private static final Pattern ORDINAL = Pattern.compile("\\b(premier|1er|1ere|deuxieme|2e|second|troisieme|3e|quatrieme|4e)\\b");
   private static final Pattern QTY = Pattern.compile("\\b(\\d{1,3})\\b");
 
@@ -42,7 +47,7 @@ public class AssistantService {
     int cart = r.cartCount() == null ? 0 : Math.max(0, r.cartCount());
     List<ProductSummary> last = loadLast(r.lastProductIds());
 
-    if (isHello(n) && n.split("\\s+").length <= 4) return greeting();
+    if (isHello(n) && productHint(n).isBlank()) return greeting();
     if (isHelp(n)) return help();
     if (isTrack(n)) return track();
     if (isAdd(n)) return add(n, last, cart);
@@ -116,14 +121,25 @@ public class AssistantService {
   }
 
   private ChatReply search(String q) {
-    var page = products.page(ProductFilter.query(q), 0, 6);
-    List<ProductSummary> list = page.content();
+    List<ProductSummary> list = products.page(ProductFilter.query(q), 0, 6).content();
+    if (list.isEmpty()) {
+      String focus = longestTerm(q);
+      if (!focus.isBlank() && !focus.equals(q)) list = products.page(ProductFilter.query(focus), 0, 6).content();
+    }
     if (list.isEmpty()) {
       return new ChatReply("Je n'ai pas trouvé « " + q + " ». Essayez un autre mot (marque, pièce, aliment…) ou une catégorie.",
           "SEARCH", q, List.of(), List.of("Quincaillerie", "Pièces détachées", "Électronique", "Alimentation"), null);
     }
     return new ChatReply("Voici ce que j'ai pour « " + q + " ». Dites « ajoute le premier » ou touchez un produit, puis « commande ».",
         "SEARCH", q, list, List.of("Ajoute le premier", "Voir le panier", "Passer commande"), null);
+  }
+
+  private static String longestTerm(String q) {
+    String best = "";
+    for (String w : q.split("\\s+")) {
+      if (w.length() > best.length()) best = w;
+    }
+    return best.length() >= 3 ? best : "";
   }
 
   private List<ProductSummary> loadLast(List<Long> ids) {
@@ -200,7 +216,7 @@ public class AssistantService {
     s = s.replaceAll("\\b(je cherche|cherche moi|recherche|je veux|je voudrais|montre moi|trouve moi|besoin de)\\b", " ");
     StringBuilder out = new StringBuilder();
     for (String w : s.split("[^a-z0-9+]+")) {
-      if (w.isBlank() || STOP.contains(w) || w.length() == 1) continue;
+      if (w.isBlank() || STOP.contains(w) || (w.length() < 3 && !w.chars().allMatch(Character::isDigit))) continue;
       if (out.length() > 0) out.append(' ');
       out.append(w);
     }

@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 import tools.jackson.core.JacksonException;
+import java.io.IOException;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -65,7 +67,25 @@ public class ApiExceptionHandler {
   }
 
   @ExceptionHandler(MaxUploadSizeExceededException.class)
-  ResponseEntity<ApiError> tooLarge(MaxUploadSizeExceededException e) { return error(HttpStatus.PAYLOAD_TOO_LARGE, "Fichier trop volumineux", null); }
+  ResponseEntity<ApiError> tooLarge(MaxUploadSizeExceededException e) {
+    return error(HttpStatus.PAYLOAD_TOO_LARGE, "Fichier trop volumineux (20 Mo maximum)", null);
+  }
+
+  @ExceptionHandler(MultipartException.class)
+  ResponseEntity<ApiError> multipart(MultipartException e) {
+    log.warn("Envoi multipart rejeté : {}", e.getMostSpecificCause().getMessage());
+    String cause = String.valueOf(e.getMostSpecificCause().getMessage());
+    if (cause.toLowerCase().contains("size") || cause.toLowerCase().contains("too large")) {
+      return error(HttpStatus.PAYLOAD_TOO_LARGE, "Fichier trop volumineux (20 Mo maximum)", null);
+    }
+    return error(HttpStatus.BAD_REQUEST, "Envoi du fichier incomplet. Réessayez.", null);
+  }
+
+  @ExceptionHandler(IOException.class)
+  ResponseEntity<ApiError> io(IOException e) {
+    log.error("Écriture fichier : {}", e.getMessage());
+    return error(HttpStatus.INTERNAL_SERVER_ERROR, "Impossible d'enregistrer l'image. Réessayez.", null);
+  }
 
   @ExceptionHandler(WebhookVerificationException.class)
   ResponseEntity<ApiError> webhook(WebhookVerificationException e) {
