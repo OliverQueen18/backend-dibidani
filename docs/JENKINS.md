@@ -12,7 +12,7 @@ Le Jenkinsfile est à la racine de chaque dépôt. Intégration VPS : [VPS.md](V
 ## Prérequis
 
 - Jenkins 2.400+ sur un agent **Linux** avec Docker
-- Plugins : **Pipeline**, **Git**, **JUnit**, **SSH Agent**, **Credentials Binding**, **GitHub**
+- Plugins : **Pipeline**, **Git**, **JUnit**, **Credentials Binding**, **GitHub** (pas besoin de SSH Agent : le job utilise `sshUserPrivateKey`)
 - L’utilisateur Jenkins dans le groupe `docker`
 
 ## Identifiants

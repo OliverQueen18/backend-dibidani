@@ -84,15 +84,14 @@ void deployImage() {
     return
   }
   if (params.DEPLOY_MODE == 'ssh') {
-    if (!params.DEPLOY_HOST?.trim()) {
-      error 'DEPLOY_HOST est obligatoire en mode ssh.'
-    }
-    sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
+    withSsh {
       sh """
-        docker save '${env.FULL_IMAGE}' | gzip | ssh -o StrictHostKeyChecking=accept-new ${params.DEPLOY_HOST} 'gunzip | docker load'
+        docker save '${env.FULL_IMAGE}' | gzip | ssh -i "\$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new ${params.DEPLOY_HOST} 'gunzip | docker load'
       """
       writeFile file: 'remote-deploy.sh', text: remoteUpScript()
-      sh "ssh -o StrictHostKeyChecking=accept-new ${params.DEPLOY_HOST} 'bash -s' < remote-deploy.sh"
+      sh """
+        ssh -i "\$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new ${params.DEPLOY_HOST} 'bash -s' < remote-deploy.sh
+      """
     }
     return
   }
@@ -111,12 +110,20 @@ void pushHub() {
 }
 
 void remoteComposePull() {
-  if (!params.DEPLOY_HOST?.trim()) {
-    error 'DEPLOY_HOST est obligatoire en mode hub (SSH vers le VPS).'
-  }
   writeFile file: 'remote-deploy.sh', text: remotePullScript()
-  sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
-    sh "ssh -o StrictHostKeyChecking=accept-new ${params.DEPLOY_HOST} 'bash -s' < remote-deploy.sh"
+  withSsh {
+    sh """
+      ssh -i "\$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new ${params.DEPLOY_HOST} 'bash -s' < remote-deploy.sh
+    """
+  }
+}
+
+void withSsh(Closure body) {
+  if (!params.DEPLOY_HOST?.trim()) {
+    error 'DEPLOY_HOST est obligatoire (SSH vers le VPS).'
+  }
+  withCredentials([sshUserPrivateKey(credentialsId: env.SSH_CREDENTIALS_ID, keyFileVariable: 'SSH_KEY', usernameVariable: 'SSH_USER')]) {
+    body()
   }
 }
 
