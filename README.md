@@ -34,7 +34,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 
 PostgreSQL et l’API ne sont **pas** publiés. Seul Nginx (port 80) est accessible.
 
-CI/CD Jenkins (image Docker + Compose) : [docs/JENKINS.md](docs/JENKINS.md).
+CI/CD Jenkins (Docker Hub + VPS) : [docs/JENKINS.md](docs/JENKINS.md). Overlay nginx-proxy : [docs/VPS.md](docs/VPS.md).
 
 ## Comptes de démonstration (seed local uniquement)
 

@@ -70,8 +70,10 @@ public class DataSeeder {
                          ProductRepository products, AdvertisementRepository ads, ShopSettingRepository shopSettings,
                          PasswordEncoder enc, TransactionTemplate tx) {
     return args -> tx.executeWithoutResult(status -> {
-      if (users.count() == 0) {
+      if (users.findByEmailIgnoreCase("admin@dibidani.ml").isEmpty()) {
         users.save(user("Administrateur Dibidani", "admin@dibidani.ml", "+22370000000", enc.encode("Admin123!"), Role.ADMIN));
+      }
+      if (users.findByEmailIgnoreCase("client@dibidani.ml").isEmpty()) {
         users.save(user("Client Démo", "client@dibidani.ml", "+22371000000", enc.encode("Client123!"), Role.CUSTOMER));
       }
       if (users.findByEmailIgnoreCase("vendeur@dibidani.ml").isEmpty()) {

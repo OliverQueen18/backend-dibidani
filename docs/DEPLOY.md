@@ -22,4 +22,4 @@ PostgreSQL n’a aucun port publié. Redis n’est pas utilisé.
 
 ## Jenkins
 
-Le `Jenkinsfile` à la racine construit l’image `dibidani-backend` et bascule le service Compose. Guide : [JENKINS.md](JENKINS.md).
+Le `Jenkinsfile` pousse `oliverqueen18/dibidani-backend` sur Docker Hub, puis le VPS fait `compose pull`. Guides : [JENKINS.md](JENKINS.md), [VPS.md](VPS.md).
