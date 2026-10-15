@@ -136,10 +136,10 @@ if [ ! -f docker-compose.dibidani.yml ]; then
   exit 1
 fi
 ${waitContainerFn()}
-docker compose ${env.COMPOSE_FILES} pull postgres-dibidani image-studio-dibidani ${env.COMPOSE_SERVICE}
+docker compose ${env.COMPOSE_FILES} pull postgres-dibidani ${env.COMPOSE_SERVICE}
 docker compose ${env.COMPOSE_FILES} up -d postgres-dibidani
 wait_container postgres-dibidani 24
-docker compose ${env.COMPOSE_FILES} up -d image-studio-dibidani
+docker compose ${env.COMPOSE_FILES} pull image-studio-dibidani && docker compose ${env.COMPOSE_FILES} up -d image-studio-dibidani || echo "image-studio absent sur Docker Hub — l'API continue (cadrage local)."
 docker compose ${env.COMPOSE_FILES} up -d --no-deps --force-recreate ${env.COMPOSE_SERVICE}
 wait_container dibidani-backend 48
 """
