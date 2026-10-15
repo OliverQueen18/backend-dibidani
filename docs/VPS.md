@@ -80,7 +80,7 @@ Paramètres des jobs :
 | `DEPLOY_MODE` | `hub` |
 | `DEPLOY_PATH` | dossier du compose VPS (celui qui contient `docker-compose.yml`) |
 | `DEPLOY_HOST` | `user@IP` du VPS |
-| Identifiant Docker Hub | `dockerhub-oliverqueen18` |
+| Identifiant Docker Hub | `dockerhub-credentials` |
 | Identifiant SSH | `dibidani-deploy-ssh` |
 
 Le job pousse l’image sur Docker Hub, puis sur le VPS : `docker compose pull` + `up -d --no-deps --force-recreate` du service (`backend-dibidani` ou `frontend-dibidani`).

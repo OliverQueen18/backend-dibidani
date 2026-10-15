@@ -20,7 +20,7 @@ Le Jenkinsfile est à la racine de chaque dépôt. Intégration VPS : [VPS.md](V
 | ID | Type | Usage |
 |---|---|---|
 | (GitHub) | PAT / GitHub App | Checkout |
-| `dockerhub-oliverqueen18` | Username/password | `docker push` |
+| `dockerhub-credentials` | Username/password | `docker push` |
 | `dibidani-deploy-ssh` | SSH Username with private key | `compose pull` sur le VPS |
 
 ## Jobs
@@ -56,7 +56,7 @@ docker push oliverqueen18/dibidani-image-studio:latest
 
 | Symptôme | Piste |
 |---|---|
-| 403 Docker Hub | identifiant `dockerhub-oliverqueen18` |
+| 403 Docker Hub | identifiant `dockerhub-credentials` |
 | `permission denied` docker | Jenkins hors du groupe `docker` |
 | `DEPLOY_HOST est obligatoire` | mode `hub`/`ssh` sans hôte |
 | Conteneur `missing` | overlay pas déployé : `docker-compose.dibidani.yml` |

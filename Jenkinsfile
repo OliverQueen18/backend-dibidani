@@ -19,7 +19,7 @@ pipeline {
     COMPOSE_SERVICE = 'backend-dibidani'
     COMPOSE_FILES = '-f docker-compose.yml -f docker-compose.dibidani.yml'
     SSH_CREDENTIALS_ID = 'dibidani-deploy-ssh'
-    DOCKERHUB_CREDENTIALS_ID = 'dockerhub-oliverqueen18'
+    DOCKERHUB_CREDENTIALS_ID = 'dockerhub-credentials'
   }
   stages {
     stage('Préparer') {
