@@ -131,9 +131,17 @@ String remotePullScript() {
   return """#!/bin/bash
 set -euo pipefail
 cd '${params.DEPLOY_PATH}'
-docker compose ${env.COMPOSE_FILES} pull ${env.COMPOSE_SERVICE}
+if [ ! -f docker-compose.dibidani.yml ]; then
+  echo "docker-compose.dibidani.yml introuvable dans ${params.DEPLOY_PATH}" >&2
+  exit 1
+fi
+${waitContainerFn()}
+docker compose ${env.COMPOSE_FILES} pull postgres-dibidani image-studio-dibidani ${env.COMPOSE_SERVICE}
+docker compose ${env.COMPOSE_FILES} up -d postgres-dibidani
+wait_container postgres-dibidani 24
+docker compose ${env.COMPOSE_FILES} up -d image-studio-dibidani
 docker compose ${env.COMPOSE_FILES} up -d --no-deps --force-recreate ${env.COMPOSE_SERVICE}
-${healthLoop()}
+wait_container dibidani-backend 48
 """
 }
 
@@ -145,20 +153,29 @@ if [ ! -f .env ]; then
   echo "Fichier .env introuvable dans ${params.DEPLOY_PATH}" >&2
   exit 1
 fi
+${waitContainerFn()}
+docker compose ${env.COMPOSE_FILES} up -d postgres-dibidani
+wait_container postgres-dibidani 24
 docker compose ${env.COMPOSE_FILES} up -d --no-deps --no-build ${env.COMPOSE_SERVICE}
-${healthLoop()}
+wait_container dibidani-backend 48
 """
 }
 
-String healthLoop() {
-  return '''
-for i in $(seq 1 36); do
-  status=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' dibidani-backend 2>/dev/null || echo missing)
-  echo "santé dibidani-backend: $status"
-  [ "$status" = healthy ] && exit 0
-  sleep 5
-done
-docker logs --tail 80 dibidani-backend || true
-exit 1
-'''
+String waitContainerFn() {
+  return """
+wait_container() {
+  local name="\$1" max="\$2" i status
+  for i in \$(seq 1 "\$max"); do
+    status=\$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "\$name" 2>/dev/null || echo missing)
+    echo "santé \$name: \$status"
+    if [ "\$status" = healthy ]; then
+      return 0
+    fi
+    sleep 5
+  done
+  docker compose ${env.COMPOSE_FILES} ps || true
+  docker logs --tail 120 "\$name" || true
+  return 1
+}
+"""
 }
