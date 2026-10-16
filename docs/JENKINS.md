@@ -4,7 +4,7 @@ Deux jobs Pipeline. Chaque build pousse une image Docker Hub (`oliverqueen18/dib
 
 | Job | Dépôt | Image Hub | Service VPS |
 |---|---|---|---|
-| `dibidani-backend` | [backend-dibidani](https://github.com/OliverQueen18/backend-dibidani) | `oliverqueen18/dibidani-backend` | `backend-dibidani` |
+| `dibidani-backend` | [backend-dibidani](https://github.com/OliverQueen18/backend-dibidani) | `oliverqueen18/dibidani-backend` et `oliverqueen18/dibidani-image-studio` | `backend-dibidani`, `image-studio-dibidani` |
 | `dibidani-frontend` | [frontend-dibidani](https://github.com/OliverQueen18/frontend-dibidani) | `oliverqueen18/dibidani-frontend` | `frontend-dibidani` |
 
 Le Jenkinsfile est à la racine de chaque dépôt. Intégration VPS : [VPS.md](VPS.md).
@@ -45,11 +45,13 @@ Webhook GitHub : `https://<jenkins>/github-webhook/` (push).
 
 ## Studio photo
 
-Pas dans les pipelines. Une fois :
+Le job `dibidani-backend` construit et pousse aussi `oliverqueen18/dibidani-image-studio` (sources dans `backend-dibidani/image-studio`).
+
+Tant que l’image n’est pas encore sur Docker Hub, démarrer le site sans ce service :
 
 ```bash
-docker build -t oliverqueen18/dibidani-image-studio:latest ./image-studio
-docker push oliverqueen18/dibidani-image-studio:latest
+docker compose -f docker-compose.yml -f docker-compose.dibidani.yml up -d \
+  postgres-dibidani backend-dibidani frontend-dibidani
 ```
 
 ## Dépannage

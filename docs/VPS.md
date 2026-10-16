@@ -12,11 +12,13 @@ Comme ERDV / PIE / Tontine :
 | Frontend | `oliverqueen18/dibidani-frontend` |
 | Studio photo | `oliverqueen18/dibidani-image-studio` |
 
-Jenkins pousse `:latest` (et un tag de build). Premier push du studio (dépôt parent, une fois) :
+Jenkins (job backend) pousse `:latest` et un tag de build pour l’API **et** le studio photo (`image-studio/` dans le dépôt backend).
+
+Si `manifest unknown` pour `dibidani-image-studio`, l’image n’est pas encore sur Docker Hub. Lancer le site sans ce service (l’API garde un cadrage local) :
 
 ```bash
-docker build -t oliverqueen18/dibidani-image-studio:latest ./image-studio
-docker push oliverqueen18/dibidani-image-studio:latest
+docker compose -f docker-compose.yml -f docker-compose.dibidani.yml up -d \
+  postgres-dibidani backend-dibidani frontend-dibidani
 ```
 
 ## 2. Fichiers sur le serveur

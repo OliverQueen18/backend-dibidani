@@ -32,7 +32,7 @@ services:
       - dibidani
 
   image-studio-dibidani:
-    image: oliverqueen18/dibidani-image-studio:${DIBIDANI_TAG:-latest}
+    image: oliverqueen18/dibidani-image-studio:${DIBIDANI_STUDIO_TAG:-${DIBIDANI_TAG:-latest}}
     container_name: dibidani-image-studio
     restart: unless-stopped
     expose:

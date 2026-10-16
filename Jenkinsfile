@@ -16,6 +16,7 @@ pipeline {
   environment {
     REGISTRY = 'oliverqueen18'
     IMAGE_NAME = 'dibidani-backend'
+    STUDIO_IMAGE_NAME = 'dibidani-image-studio'
     COMPOSE_SERVICE = 'backend-dibidani'
     COMPOSE_FILES = '-f docker-compose.yml -f docker-compose.dibidani.yml'
     SSH_CREDENTIALS_ID = 'ssh-server-credentials'
@@ -30,7 +31,10 @@ pipeline {
           env.IMAGE_TAG = "${env.BUILD_NUMBER}-${shortSha}"
           env.HUB_IMAGE = "${env.REGISTRY}/${env.IMAGE_NAME}"
           env.FULL_IMAGE = "${env.HUB_IMAGE}:${env.IMAGE_TAG}"
+          env.STUDIO_HUB = "${env.REGISTRY}/${env.STUDIO_IMAGE_NAME}"
+          env.STUDIO_FULL = "${env.STUDIO_HUB}:${env.IMAGE_TAG}"
           echo "Image : ${env.FULL_IMAGE}"
+          echo "Studio : ${env.STUDIO_FULL}"
         }
       }
     }
@@ -53,7 +57,10 @@ pipeline {
     }
     stage('Image Docker') {
       steps {
-        sh 'docker build -t "$FULL_IMAGE" -t "$HUB_IMAGE:latest" -t "$IMAGE_NAME:latest" .'
+        sh '''
+          docker build -t "$FULL_IMAGE" -t "$HUB_IMAGE:latest" -t "$IMAGE_NAME:latest" .
+          docker build -t "$STUDIO_FULL" -t "$STUDIO_HUB:latest" -t "$STUDIO_IMAGE_NAME:latest" ./image-studio
+        '''
       }
     }
     stage('Déployer') {
@@ -86,7 +93,7 @@ void deployImage() {
   if (params.DEPLOY_MODE == 'ssh') {
     withSsh {
       sh """
-        docker save '${env.FULL_IMAGE}' | gzip | ssh -i "\$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new ${params.DEPLOY_HOST} 'gunzip | docker load'
+        docker save '${env.FULL_IMAGE}' '${env.STUDIO_FULL}' | gzip | ssh -i "\$SSH_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new ${params.DEPLOY_HOST} 'gunzip | docker load'
       """
       writeFile file: 'remote-deploy.sh', text: remoteUpScript()
       sh """
@@ -104,6 +111,8 @@ void pushHub() {
       echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin
       docker push "$FULL_IMAGE"
       docker push "$HUB_IMAGE:latest"
+      docker push "$STUDIO_FULL"
+      docker push "$STUDIO_HUB:latest"
       docker logout
     '''
   }
@@ -139,17 +148,24 @@ if [ ! -f docker-compose.dibidani.yml ]; then
 fi
 ${uploadProxyFix()}
 ${waitContainerFn()}
-awk -v k='DIBIDANI_BACKEND_TAG' -v v='${env.IMAGE_TAG}' '
-  BEGIN { f=0 }
-  \$0 ~ "^" k "=" { print k "=" v; f=1; next }
-  { print }
-  END { if (!f) print k "=" v }
-' .env > .env.tmp && mv .env.tmp .env
+persist_tag() {
+  local k="\$1" v="\$2"
+  awk -v k="\$k" -v v="\$v" '
+    BEGIN { f=0 }
+    \$0 ~ "^" k "=" { print k "=" v; f=1; next }
+    { print }
+    END { if (!f) print k "=" v }
+  ' .env > .env.tmp && mv .env.tmp .env
+}
+persist_tag DIBIDANI_BACKEND_TAG '${env.IMAGE_TAG}'
+persist_tag DIBIDANI_STUDIO_TAG '${env.IMAGE_TAG}'
 export DIBIDANI_BACKEND_TAG='${env.IMAGE_TAG}'
+export DIBIDANI_STUDIO_TAG='${env.IMAGE_TAG}'
 docker compose ${env.COMPOSE_FILES} pull postgres-dibidani ${env.COMPOSE_SERVICE}
 docker compose ${env.COMPOSE_FILES} up -d postgres-dibidani
 wait_container postgres-dibidani 24
-docker compose ${env.COMPOSE_FILES} pull image-studio-dibidani && docker compose ${env.COMPOSE_FILES} up -d image-studio-dibidani || echo "image-studio absent sur Docker Hub — l'API continue (cadrage local)."
+docker compose ${env.COMPOSE_FILES} pull image-studio-dibidani
+docker compose ${env.COMPOSE_FILES} up -d --force-recreate image-studio-dibidani
 docker compose ${env.COMPOSE_FILES} up -d --no-deps --force-recreate --pull always ${env.COMPOSE_SERVICE}
 wait_container dibidani-backend 48
 """

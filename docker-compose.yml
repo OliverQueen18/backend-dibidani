@@ -96,8 +96,9 @@ services:
       - data
 
   image-studio:
+    image: ${STUDIO_IMAGE:-dibidani-image-studio:local}
     build:
-      context: ../image-studio
+      context: ./image-studio
     container_name: dibidani-image-studio
     environment:
       ENGINE: ${PHOTO_STUDIO_ENGINE:-local}
