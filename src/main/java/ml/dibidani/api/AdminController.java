@@ -157,11 +157,24 @@ public class AdminController {
     return audit.page(q, action, actor, from, to, page, size);
   }
 
+  @GetMapping("/uploads")
+  @PreAuthorize("hasAuthority('PERM_CATALOG_MANAGE') or hasAuthority('PERM_ADS_MANAGE') or hasAuthority('PERM_SETTINGS_MANAGE')")
+  public List<StorageService.MediaItem> uploads() throws IOException {
+    return storage.listPublic();
+  }
+
   @PostMapping(value = "/uploads", consumes = "multipart/form-data")
   @PreAuthorize("hasAuthority('PERM_CATALOG_MANAGE') or hasAuthority('PERM_ADS_MANAGE') or hasAuthority('PERM_SETTINGS_MANAGE')")
   @ResponseStatus(HttpStatus.CREATED)
   public Map<String, String> upload(@RequestParam("file") MultipartFile file) throws IOException {
     return Map.of("url", storage.store(file));
+  }
+
+  @DeleteMapping("/uploads")
+  @PreAuthorize("hasAuthority('PERM_CATALOG_MANAGE') or hasAuthority('PERM_ADS_MANAGE') or hasAuthority('PERM_SETTINGS_MANAGE')")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void deleteUpload(@RequestParam String url) throws IOException {
+    storage.deletePublic(url);
   }
 
 }
