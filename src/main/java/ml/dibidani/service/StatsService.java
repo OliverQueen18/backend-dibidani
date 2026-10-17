@@ -18,6 +18,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.Date;
 import java.time.*;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 /** Indicateurs du back-office, calculés en SQL sur les commandes réellement vendues. */
@@ -47,16 +48,17 @@ public class StatsService {
     this.mapper = mapper;
   }
 
-  public DashboardResponse dashboard(int days) {
-    int period = Math.max(1, Math.min(days, 365));
-    LocalDate today = LocalDate.now(BAMAKO);
-    LocalDate fromDay = today.minusDays(period - 1L);
-    Instant from = start(fromDay), to = start(today.plusDays(1));
-    Instant prevFrom = start(fromDay.minusDays(period));
+  public DashboardResponse dashboard(Integer days, LocalDate fromDay, LocalDate toDay, boolean all) {
+    LocalDate[] bounds = bounds(fromDay, toDay, days == null ? 30 : days, all);
+    LocalDate startDay = bounds[0], endDay = bounds[1];
+    int period = (int) ChronoUnit.DAYS.between(startDay, endDay) + 1;
+    Instant from = start(startDay), to = start(endDay.plusDays(1));
+    Instant prevFrom = start(startDay.minusDays(period));
 
     var current = sales(from, to);
     var previous = sales(prevFrom, from);
-    var todaySales = sales(start(today), to);
+    LocalDate today = LocalDate.now(BAMAKO);
+    var todaySales = sales(start(today), start(today.plusDays(1)));
     var kpis = new Kpis(current.revenue, previous.revenue, current.count, previous.count,
         todaySales.revenue, todaySales.count, average(current), users.countByRoleAndCreatedAtGreaterThanEqual(Role.CUSTOMER, from),
         orders.unitsSold(from, to), products.countLowStock(), products.countByActiveTrueAndStock(0),
@@ -66,16 +68,13 @@ public class StatsService {
 
     var latest = orders.findAll(PageRequest.of(0, 8, Sort.by(Sort.Order.desc("createdAt")))).map(mapper::summary).getContent();
     var lowStock = products.findLowStock(PageRequest.of(0, 8)).stream().map(StockRow::of).toList();
-    return new DashboardResponse(period, fromDay, today, kpis, byDay(from, to, fromDay, today), statuses(from, to),
+    return new DashboardResponse(period, startDay, endDay, kpis, byDay(from, to, startDay, endDay), statuses(from, to),
         methods(from, to), categories(from, to), top(from, to, 5), payments.stats(), lowStock, latest);
   }
 
-  public ReportResponse report(LocalDate fromDay, LocalDate toDay) {
-    LocalDate today = LocalDate.now(BAMAKO);
-    LocalDate f = fromDay == null ? today.minusDays(29) : fromDay;
-    LocalDate t = toDay == null ? today : toDay;
-    if (t.isBefore(f)) throw new IllegalArgumentException("La date de fin doit suivre la date de début");
-    if (f.plusDays(731).isBefore(t)) throw new IllegalArgumentException("Période limitée à deux ans");
+  public ReportResponse report(LocalDate fromDay, LocalDate toDay, boolean all) {
+    LocalDate[] bounds = bounds(fromDay, toDay, 30, all);
+    LocalDate f = bounds[0], t = bounds[1];
     Instant from = start(f), to = start(t.plusDays(1));
     var s = sales(from, to);
     List<LabelValue> vendors = orders.salesByVendor(from, to, 10).stream()
@@ -154,6 +153,18 @@ public class StatsService {
       LocalDate d = r[0] instanceof Date sql ? sql.toLocalDate() : LocalDate.parse(r[0].toString());
       found.put(d, new DayPoint(d, num(r[1]), dec(r[2])));
     }
+    if (ChronoUnit.DAYS.between(fromDay, toDay) > 180) {
+      Map<YearMonth, DayPoint> months = new LinkedHashMap<>();
+      for (DayPoint p : found.values()) {
+        YearMonth ym = YearMonth.from(p.date());
+        months.merge(ym, p, (a, b) -> new DayPoint(ym.atDay(1), a.orders() + b.orders(), a.revenue().add(b.revenue())));
+      }
+      List<DayPoint> out = new ArrayList<>();
+      for (YearMonth ym = YearMonth.from(fromDay); !ym.isAfter(YearMonth.from(toDay)); ym = ym.plusMonths(1)) {
+        out.add(months.getOrDefault(ym, new DayPoint(ym.atDay(1), 0, BigDecimal.ZERO)));
+      }
+      return out;
+    }
     List<DayPoint> out = new ArrayList<>();
     for (LocalDate d = fromDay; !d.isAfter(toDay); d = d.plusDays(1)) out.add(found.getOrDefault(d, new DayPoint(d, 0, BigDecimal.ZERO)));
     return out;
@@ -182,6 +193,22 @@ public class StatsService {
   private List<TopProduct> top(Instant from, Instant to, int limit) {
     return orders.topProducts(from, to, limit).stream()
         .map(r -> new TopProduct(((Number) r[0]).longValue(), (String) r[1], (String) r[2], num(r[3]), dec(r[4]))).toList();
+  }
+
+  private LocalDate[] bounds(LocalDate fromDay, LocalDate toDay, int defaultDays, boolean all) {
+    LocalDate today = LocalDate.now(BAMAKO);
+    LocalDate t = toDay == null ? today : toDay;
+    if (all) {
+      Instant first = orders.firstCreatedAt();
+      LocalDate f = first == null ? today : first.atZone(BAMAKO).toLocalDate();
+      if (t.isBefore(f)) t = f;
+      return new LocalDate[]{f, t};
+    }
+    int period = Math.max(1, Math.min(defaultDays, 731));
+    LocalDate f = fromDay == null ? t.minusDays(period - 1L) : fromDay;
+    if (t.isBefore(f)) throw new IllegalArgumentException("La date de fin doit suivre la date de début");
+    if (f.plusDays(731).isBefore(t)) throw new IllegalArgumentException("Période limitée à deux ans");
+    return new LocalDate[]{f, t};
   }
 
   private static Instant start(LocalDate d) { return d.atStartOfDay(BAMAKO).toInstant(); }

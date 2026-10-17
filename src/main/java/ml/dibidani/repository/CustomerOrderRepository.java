@@ -17,6 +17,9 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, Lo
   /** Statuts comptés comme ventes (voir {@link OrderStatus#countsAsSale()}). */
   String SALE_STATUSES = "('PAID','CONFIRMED','PREPARING','READY_FOR_DELIVERY','OUT_FOR_DELIVERY','DELIVERED')";
 
+  @Query("select min(o.createdAt) from CustomerOrder o")
+  Instant firstCreatedAt();
+
   Optional<CustomerOrder> findByOrderNumber(String orderNumber);
   Optional<CustomerOrder> findByTrackingToken(String trackingToken);
   boolean existsByOrderNumber(String orderNumber);

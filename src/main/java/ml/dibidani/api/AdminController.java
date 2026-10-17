@@ -45,20 +45,27 @@ public class AdminController {
 
   @GetMapping("/dashboard")
   @PreAuthorize("hasAuthority('PERM_DASHBOARD_VIEW')")
-  public DashboardResponse dashboard(@RequestParam(defaultValue = "30") int days) { return stats.dashboard(days); }
+  public DashboardResponse dashboard(@RequestParam(required = false) Integer days,
+                                     @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+                                     @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+                                     @RequestParam(defaultValue = "false") boolean all) {
+    return stats.dashboard(days, from, to, all);
+  }
 
   @GetMapping("/reports")
   @PreAuthorize("hasAuthority('PERM_REPORTS_VIEW')")
   public ReportResponse report(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-                               @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-    return stats.report(from, to);
+                               @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+                               @RequestParam(defaultValue = "false") boolean all) {
+    return stats.report(from, to, all);
   }
 
   @GetMapping(value = "/reports/export.csv", produces = "text/csv")
   @PreAuthorize("hasAuthority('PERM_REPORTS_VIEW')")
   public ResponseEntity<byte[]> exportReport(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-                                             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-    var r = stats.report(from, to);
+                                             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+                                             @RequestParam(defaultValue = "false") boolean all) {
+    var r = stats.report(from, to, all);
     var csv = new StringBuilder("\uFEFF");
     csv.append("Rapport Dibidani;").append(r.from()).append(';').append(r.to()).append('\n');
     csv.append("Chiffre d'affaires;").append(plain(r.revenue())).append('\n');
