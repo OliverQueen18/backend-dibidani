@@ -70,7 +70,11 @@ public final class PhotoStudioDtos {
   public record LookupResponse(
       Long productId, String name, String sku, String barcode, String slug,
       String mainImageUrl, List<String> images, boolean owned,
-      List<String> supplierHints) {}
+      List<String> supplierHints) {
+    public static LookupResponse empty() {
+      return new LookupResponse(null, null, null, null, null, null, List.of(), false, List.of());
+    }
+  }
 
   public record SettingsResponse(
       String engine, boolean watermarkEnabled, String watermarkPosition,

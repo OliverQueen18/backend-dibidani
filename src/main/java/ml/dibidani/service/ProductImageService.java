@@ -156,10 +156,7 @@ public class ProductImageService {
     Product p = products.findById(productId).orElseThrow(() -> new NotFoundException("Produit introuvable"));
     AppUser user = actor(auth);
     assertCanEditProduct(user, shopOf(user), p);
-    String url = r == null || r.imageUrl() == null ? "" : r.imageUrl().trim();
-    if (url.isBlank()) throw new IllegalArgumentException("Image requise");
-    List<String> known = currentGallery(p);
-    if (!known.contains(url)) throw new IllegalArgumentException("Cette image n’appartient pas au produit.");
+    String url = resolveProductImage(p, r == null ? null : r.imageUrl());
     applyGallery(p, url, true);
     products.save(p);
     return new VitrineResponse(p.getMainImageUrl(), List.copyOf(p.getImages()));
@@ -197,18 +194,21 @@ public class ProductImageService {
 
   @Transactional(readOnly = true)
   public LookupResponse lookup(Authentication auth, String code) {
-    if (code == null || code.isBlank()) throw new IllegalArgumentException("Code manquant");
+    if (code == null || code.isBlank()) return LookupResponse.empty();
     String c = code.trim();
     AppUser user = actor(auth);
     Vendor shop = shopOf(user);
-    Product p = products.findFirstByBarcodeIgnoreCase(c)
+    return products.findFirstByBarcodeIgnoreCase(c)
+        .or(() -> products.findBySkuIgnoreCase(c))
         .or(() -> products.findBySku(c))
-        .orElseThrow(() -> new NotFoundException("Aucun produit pour ce code"));
-    boolean owned = staff(user) || (shop != null && p.getVendor() != null && shop.getId().equals(p.getVendor().getId()));
-    List<String> hints = new ArrayList<>();
-    if (props.isSupplierLookupEnabled()) hints.add("Recherche d’images fournisseurs non configurée.");
-    return new LookupResponse(p.getId(), p.getName(), p.getSku(), p.getBarcode(), p.getSlug(),
-        p.getMainImageUrl(), p.getImages(), owned, hints);
+        .map(p -> {
+          boolean owned = staff(user) || (shop != null && p.getVendor() != null && shop.getId().equals(p.getVendor().getId()));
+          List<String> hints = new ArrayList<>();
+          if (props.isSupplierLookupEnabled()) hints.add("Recherche d’images fournisseurs non configurée.");
+          return new LookupResponse(p.getId(), p.getName(), p.getSku(), p.getBarcode(), p.getSlug(),
+              p.getMainImageUrl(), p.getImages(), owned, hints);
+        })
+        .orElseGet(LookupResponse::empty);
   }
 
   public SettingsResponse settings() {
@@ -230,6 +230,41 @@ public class ProductImageService {
     }
   }
 
+  private String resolveProductImage(Product p, String raw) {
+    String url = cleanImageUrl(raw);
+    if (url.isBlank()) throw new IllegalArgumentException("Image requise");
+    for (String known : currentGallery(p)) {
+      if (sameImage(known, url)) return known;
+    }
+    if (allowedImage(url)) return url;
+    throw new IllegalArgumentException("Cette image n’appartient pas au produit.");
+  }
+
+  private static String cleanImageUrl(String raw) {
+    if (raw == null) return "";
+    String u = raw.trim();
+    int cut = u.indexOf('?');
+    if (cut >= 0) u = u.substring(0, cut);
+    cut = u.indexOf('#');
+    if (cut >= 0) u = u.substring(0, cut);
+    int scheme = u.indexOf("://");
+    if (scheme > 0) {
+      int slash = u.indexOf('/', scheme + 3);
+      u = slash >= 0 ? u.substring(slash) : "";
+    }
+    return u;
+  }
+
+  private static boolean sameImage(String a, String b) {
+    return cleanImageUrl(a).equals(cleanImageUrl(b));
+  }
+
+  private static boolean allowedImage(String url) {
+    String n = cleanImageUrl(url);
+    return n.startsWith("/uploads/") || n.startsWith("uploads/")
+        || n.startsWith("/assets/") || n.startsWith("assets/");
+  }
+
   private List<String> currentGallery(Product p) {
     List<String> gallery = new ArrayList<>();
     if (p.getMainImageUrl() != null && !p.getMainImageUrl().isBlank()) gallery.add(p.getMainImageUrl());
@@ -239,8 +274,10 @@ public class ProductImageService {
 
   private void applyGallery(Product p, String url, boolean main) {
     if (url == null || url.isBlank()) return;
+    url = cleanImageUrl(url);
+    if (url.isBlank()) return;
     List<String> gallery = currentGallery(p);
-    if (!gallery.contains(url)) {
+    if (gallery.stream().noneMatch(k -> sameImage(k, url))) {
       if (gallery.size() >= 12) throw new IllegalArgumentException("12 images maximum par produit");
       if (main) gallery.add(0, url);
       else gallery.add(url);

@@ -48,7 +48,7 @@ public class ProductPhotoStudioController {
     return studio.confirm(a, id, body == null ? new ConfirmRequest(null, false) : body);
   }
 
-  @GetMapping("/api/v1/products/{id}/images")
+  @GetMapping("/api/v1/products/{id:\\d+}/images")
   @PreAuthorize("hasAuthority('PERM_CATALOG_MANAGE') or hasRole('SELLER')")
   public List<AssetResponse> list(Authentication a, @PathVariable Long id) {
     return studio.list(a, id);
