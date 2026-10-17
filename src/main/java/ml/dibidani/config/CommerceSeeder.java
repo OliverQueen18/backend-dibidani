@@ -17,42 +17,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Données de démonstration du parcours d'achat : quartiers de Bamako, véhicules, compatibilités, code promo, livreur. Idempotent. */
+/** Données de démonstration du parcours d'achat : véhicules, compatibilités, code promo, livreur. Les zones sont dans {@link CatalogSeeder}. */
 @Configuration
 @ConditionalOnProperty(name = "app.seed.enabled", havingValue = "true", matchIfMissing = true)
 public class CommerceSeeder {
 
-  private record Zone(String commune, String district, int standard, Integer express, String standardTime, String expressTime) {}
   private record Engine(String brand, String model, VehicleType type, String name, FuelType fuel, Integer cc, Integer hp, int from, Integer to) {}
   private record Compat(String sku, String brand, String model, String engine, Integer from, Integer to, String notes) {}
-
-  private static final List<Zone> ZONES = List.of(
-      new Zone("Commune III", "Dibidani", 1000, 2000, "Sous 24 h", "Sous 2 h"),
-      new Zone("Commune III", "Badialan", 1000, 2000, "Sous 24 h", "Sous 2 h"),
-      new Zone("Commune III", "Bamako-Coura", 1000, 2000, "Sous 24 h", "Sous 2 h"),
-      new Zone("Commune III", "Dravéla", 1000, 2000, "Sous 24 h", "Sous 2 h"),
-      new Zone("Commune III", "Point G", 1500, 2500, "Sous 24 h", "Sous 3 h"),
-      new Zone("Commune II", "Médina Coura", 1500, 2500, "Sous 24 h", "Sous 3 h"),
-      new Zone("Commune II", "Missira", 1500, 2500, "Sous 24 h", "Sous 3 h"),
-      new Zone("Commune II", "Hippodrome", 1500, 2500, "Sous 24 h", "Sous 3 h"),
-      new Zone("Commune II", "Niarela", 1500, 2500, "Sous 24 h", "Sous 3 h"),
-      new Zone("Commune I", "Korofina", 2000, 3000, "Sous 24 h", "Sous 3 h"),
-      new Zone("Commune I", "Djélibougou", 2000, 3000, "Sous 24 h", "Sous 3 h"),
-      new Zone("Commune I", "Banconi", 2000, 3500, "24 à 48 h", "Sous 4 h"),
-      new Zone("Commune I", "Boulkassoumbougou", 2000, 3500, "24 à 48 h", "Sous 4 h"),
-      new Zone("Commune IV", "Hamdallaye", 1500, 2500, "Sous 24 h", "Sous 3 h"),
-      new Zone("Commune IV", "Lafiabougou", 2000, 3000, "Sous 24 h", "Sous 3 h"),
-      new Zone("Commune IV", "Djicoroni Para", 2000, 3000, "Sous 24 h", "Sous 4 h"),
-      new Zone("Commune IV", "Sébénikoro", 2500, 3500, "24 à 48 h", "Sous 4 h"),
-      new Zone("Commune V", "Badalabougou", 1500, 2500, "Sous 24 h", "Sous 3 h"),
-      new Zone("Commune V", "Quartier Mali", 2000, 3000, "Sous 24 h", "Sous 3 h"),
-      new Zone("Commune V", "Kalaban Coura", 2000, 3500, "24 à 48 h", "Sous 4 h"),
-      new Zone("Commune V", "Daoudabougou", 2000, 3000, "Sous 24 h", "Sous 4 h"),
-      new Zone("Commune VI", "Sogoniko", 2000, 3000, "Sous 24 h", "Sous 3 h"),
-      new Zone("Commune VI", "Faladié", 2000, 3000, "Sous 24 h", "Sous 3 h"),
-      new Zone("Commune VI", "Magnambougou", 2000, 3500, "24 à 48 h", "Sous 4 h"),
-      new Zone("Commune VI", "Niamakoro", 2500, 3500, "24 à 48 h", "Sous 4 h"),
-      new Zone("Commune VI", "Sénou", 3000, null, "24 à 48 h", null));
 
   private static final List<Engine> ENGINES = List.of(
       new Engine("Toyota", "Corolla", VehicleType.CAR, "1.8 VVT-i", FuelType.PETROL, 1798, 140, 2014, 2019),
@@ -84,28 +55,11 @@ public class CommerceSeeder {
 
   @Bean
   @Order(10)
-  CommandLineRunner seedCommerce(DeliveryZoneRepository zones, VehicleBrandRepository vehicleBrands, VehicleModelRepository vehicleModels,
+  CommandLineRunner seedCommerce(VehicleBrandRepository vehicleBrands, VehicleModelRepository vehicleModels,
                                  VehicleEngineRepository vehicleEngines, VehicleCompatibilityRepository compatibilities, ProductRepository products,
                                  CategoryRepository categories, BrandRepository brands, VendorRepository vendors, PromoCodeRepository promos,
                                  AppUserRepository users, PasswordEncoder enc, TransactionTemplate tx) {
     return args -> tx.executeWithoutResult(status -> {
-      int order = 0;
-      for (Zone z : ZONES) {
-        int position = order++;
-        if (zones.existsByCityIgnoreCaseAndCommuneIgnoreCaseAndDistrictIgnoreCase("Bamako", z.commune(), z.district())) continue;
-        var n = new DeliveryZone();
-        n.setCity("Bamako");
-        n.setCommune(z.commune());
-        n.setDistrict(z.district());
-        n.setName(z.district() + " (" + z.commune() + ")");
-        n.setStandardPrice(BigDecimal.valueOf(z.standard()));
-        n.setExpressPrice(z.express() == null ? null : BigDecimal.valueOf(z.express()));
-        n.setEstimatedStandardTime(z.standardTime());
-        n.setEstimatedExpressTime(z.expressTime());
-        n.setDisplayOrder(position);
-        zones.save(n);
-      }
-
       if (users.findByEmailIgnoreCase("livreur@dibidani.ml").isEmpty()) {
         var u = new AppUser();
         u.setFullName("Moussa Livreur");

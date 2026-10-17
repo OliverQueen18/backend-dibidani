@@ -11,41 +11,16 @@ import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.support.TransactionTemplate;
 import java.math.BigDecimal;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 
-/** Données de démonstration idempotentes : complète une base existante sans rien dupliquer. Désactivable via SEED_DEMO_DATA=false. */
+/** Comptes, produits et réglages de démonstration. Désactivable via SEED_DEMO_DATA=false. Le référentiel catalogue est dans {@link CatalogSeeder}. */
 @Configuration
 @ConditionalOnProperty(name = "app.seed.enabled", havingValue = "true", matchIfMissing = true)
 public class DataSeeder {
 
-  private record Cat(String name, String slug, String icon, boolean featured, String description) {}
-  private record Sub(String parentSlug, String name, String slug) {}
   private record P(String sku, String name, String slug, String price, String promo, String category, String sub, String brand, String vendor,
                    int stock, boolean featured, boolean bestSeller, boolean newArrival, Map<String, String> specs, List<String[]> variants) {}
-
-  private static final List<Cat> CATEGORIES = List.of(
-      new Cat("Pièces détachées", "pieces-detachees", "⚙️", true, "Pièces auto et moto : batteries, huiles, filtres, freinage."),
-      new Cat("Quincaillerie", "quincaillerie", "🛠️", true, "Outillage, visserie, plomberie et matériaux."),
-      new Cat("Alimentation", "alimentation", "🛒", true, "Produits alimentaires du marché livrés chez vous."),
-      new Cat("Boissons & Eaux", "boissons-eaux", "🥤", false, "Eaux minérales, jus et boissons."),
-      new Cat("Vêtements", "vetements", "👕", false, "Mode homme, femme et enfant."),
-      new Cat("Électronique", "electronique", "📱", true, "Téléphones, accessoires, TV et audio."),
-      new Cat("Électroménager", "electromenager", "🧺", false, "Réfrigérateurs, ventilateurs, petits appareils."),
-      new Cat("Maison", "maison", "🏠", false, "Équipement et décoration de la maison."),
-      new Cat("Énergie solaire", "energie-solaire", "☀️", false, "Panneaux, batteries solaires et équipements électriques."));
-
-  private static final List<Sub> SUBCATEGORIES = List.of(
-      new Sub("pieces-detachees", "Batteries automobiles", "batteries-automobiles"),
-      new Sub("pieces-detachees", "Pièces moto", "pieces-moto"),
-      new Sub("pieces-detachees", "Huiles et lubrifiants", "huiles-lubrifiants"),
-      new Sub("electronique", "Téléphones", "telephones"),
-      new Sub("electronique", "Accessoires", "accessoires-electronique"),
-      new Sub("quincaillerie", "Outillage électroportatif", "outillage-electroportatif"),
-      new Sub("energie-solaire", "Kits solaires", "kits-solaires"),
-      new Sub("alimentation", "Céréales et riz", "cereales-riz"));
 
   private static final List<P> PRODUCTS = List.of(
       new P("DBD-EL-001", "Samsung Galaxy A54 5G", "samsung-galaxy-a54-5g", "180000", "165000", "electronique", "telephones", "Samsung", "Electro Mali", 25, true, true, true,
@@ -67,7 +42,7 @@ public class DataSeeder {
   @Bean
   @Order(0)
   CommandLineRunner seed(AppUserRepository users, CategoryRepository categories, BrandRepository brands, VendorRepository vendors,
-                         ProductRepository products, AdvertisementRepository ads, ShopSettingRepository shopSettings,
+                         ProductRepository products, ShopSettingRepository shopSettings,
                          PasswordEncoder enc, TransactionTemplate tx) {
     return args -> tx.executeWithoutResult(status -> {
       if (users.findByEmailIgnoreCase("admin@dibidani.ml").isEmpty()) {
@@ -83,44 +58,6 @@ public class DataSeeder {
         users.save(user("Responsable catalogue", "catalogue@dibidani.ml", "+22373000000", enc.encode("Catalogue123!"), Role.CATALOG_MANAGER));
       }
 
-      int order = 0;
-      for (Cat c : CATEGORIES) {
-        int position = order++;
-        var cat = categories.findBySlug(c.slug()).orElseGet(() -> {
-          var n = new Category();
-          n.setName(c.name());
-          n.setSlug(c.slug());
-          n.setIcon(c.icon());
-          n.setDisplayOrder(position);
-          return n;
-        });
-        if (cat.getDescription() == null) cat.setDescription(c.description());
-        if (cat.getId() == null) cat.setFeatured(c.featured());
-        categories.save(cat);
-      }
-      int subOrder = 0;
-      for (Sub s : SUBCATEGORIES) {
-        if (categories.existsBySlug(s.slug())) continue;
-        var n = new Category();
-        n.setName(s.name());
-        n.setSlug(s.slug());
-        n.setParent(categories.findBySlug(s.parentSlug()).orElseThrow());
-        n.setDisplayOrder(subOrder++);
-        categories.save(n);
-      }
-
-      for (String name : List.of("Olive Services", "Auto Pièces Dibidani", "Auto Pièces Bamako", "Quincaillerie Dibidani", "Dibidani Distribution", "Electro Mali")) {
-        String slug = Slugs.slugify(name);
-        if (vendors.existsBySlug(slug)) continue;
-        var v = new Vendor();
-        v.setName(name);
-        v.setSlug(slug);
-        v.setDistrict("Dibidani, Commune III");
-        v.setCity("Bamako");
-        v.setPhone("+223 76 12 34 56");
-        v.setDescription(name + " est un commerçant référencé du marché de Dibidani, sélectionné pour la qualité de ses produits.");
-        vendors.save(v);
-      }
       users.findByEmailIgnoreCase("vendeur@dibidani.ml").ifPresent(seller -> {
         if (vendors.findByOwnerId(seller.getId()).isPresent()) return;
         var shop = vendors.findBySlug("electro-mali").orElse(null);
@@ -139,13 +76,6 @@ public class DataSeeder {
         demo.setDescription("Boutique de démonstration pour un compte vendeur.");
         vendors.save(demo);
       });
-
-      for (String name : List.of("Samsung", "Bosch", "TotalEnergies", "Tecno", "Infinix", "Générique", "Varta")) {
-        if (brands.existsByNameIgnoreCase(name)) continue;
-        var b = new Brand();
-        b.setName(name);
-        brands.save(b);
-      }
 
       for (P d : PRODUCTS) {
         if (products.findBySku(d.sku()).isPresent() || products.existsBySlug(d.slug())) continue;
@@ -190,29 +120,10 @@ public class DataSeeder {
         products.save(existing);
       });
 
-      Instant now = Instant.now();
-      if (!ads.existsByPosition(AdPosition.HOME_HERO)) {
-        ads.save(ad("Le grand marché de Bamako, à portée de main", "Commandez les produits du marché de Dibidani et recevez-les chez vous, au bureau ou partout à Bamako.",
-            "assets/hero-market.jpg", "/category/all", "Découvrir nos offres", AdPosition.HOME_HERO, AdType.SLIDER, 0, now));
-        ads.save(ad("Pièces auto et moto au meilleur prix", "Batteries, huiles et filtres des meilleures marques, livrés en 24 h.",
-            null, "/category/pieces-detachees", "Voir les pièces", AdPosition.HOME_HERO, AdType.SLIDER, 1, now));
-        ads.save(ad("Passez à l'énergie solaire", "Kits solaires et équipements électriques pour la maison et le commerce.",
-            null, "/category/energie-solaire", "Je m'équipe", AdPosition.HOME_HERO, AdType.SLIDER, 2, now));
-      }
-      seedAd(ads, AdPosition.HOME_TOP, ad("Votre publicité ici", "Touchez des milliers de clients chaque jour à Bamako.", null, "/category/all", "En savoir plus", AdPosition.HOME_TOP, AdType.BANNER, 0, now));
-      seedAd(ads, AdPosition.HOME_MIDDLE, ad("Panneaux solaires pour un Mali plus lumineux", "Installation, garantie et livraison à Bamako.", null, "/category/energie-solaire", "Découvrir", AdPosition.HOME_MIDDLE, AdType.BANNER, 0, now));
-      seedAd(ads, AdPosition.HOME_BOTTOM, ad("Des marques fiables, disponibles à Dibidani", "Samsung, Bosch, Varta, TotalEnergies et bien d'autres.", null, "/category/all", "Voir les offres", AdPosition.HOME_BOTTOM, AdType.BANNER, 0, now));
-      seedAd(ads, AdPosition.CATEGORY_TOP, ad("Des offres spéciales au meilleur prix à Bamako", null, null, "/category/all?promo=true", "Voir les offres", AdPosition.CATEGORY_TOP, AdType.BANNER, 0, now));
-      seedAd(ads, AdPosition.PRODUCT_SIDEBAR, ad("Livraison offerte dès 100 000 FCFA", "Sur toute la ville de Bamako.", null, "/category/all", "J'en profite", AdPosition.PRODUCT_SIDEBAR, AdType.CARD, 0, now));
-      seedAd(ads, AdPosition.CART, ad("Des prix imbattables", "Profitez des promotions des commerçants de Dibidani.", null, "/category/all?promo=true", "Découvrir", AdPosition.CART, AdType.CARD, 0, now));
       seedSetting(shopSettings, "facebookUrl", "https://www.facebook.com/dibidani");
       seedSetting(shopSettings, "tiktokUrl", "https://www.tiktok.com/@dibidani");
       seedSetting(shopSettings, "whatsapp", "+223 76 12 34 56");
     });
-  }
-
-  private static void seedAd(AdvertisementRepository ads, AdPosition position, Advertisement ad) {
-    if (!ads.existsByPosition(position)) ads.save(ad);
   }
 
   private static void seedSetting(ShopSettingRepository settings, String key, String value) {
@@ -229,18 +140,4 @@ public class DataSeeder {
     return u;
   }
 
-  private static Advertisement ad(String title, String description, String image, String target, String cta, AdPosition position, AdType type, int order, Instant now) {
-    var a = new Advertisement();
-    a.setTitle(title);
-    a.setDescription(description);
-    a.setImageUrl(image);
-    a.setTargetUrl(target);
-    a.setCtaLabel(cta);
-    a.setPosition(position);
-    a.setType(type);
-    a.setDisplayOrder(order);
-    a.setStartDate(now.minus(1, ChronoUnit.DAYS));
-    a.setEndDate(now.plus(365, ChronoUnit.DAYS));
-    return a;
-  }
 }

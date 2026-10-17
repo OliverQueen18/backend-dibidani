@@ -7,16 +7,22 @@ import ml.dibidani.common.NotFoundException;
 import ml.dibidani.common.Slugs;
 import ml.dibidani.domain.Category;
 import ml.dibidani.repository.CategoryRepository;
+import ml.dibidani.repository.ProductRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
 @Transactional(readOnly = true)
 public class CategoryService {
   private final CategoryRepository categories;
+  private final ProductRepository products;
 
-  public CategoryService(CategoryRepository categories) { this.categories = categories; }
+  public CategoryService(CategoryRepository categories, ProductRepository products) {
+    this.categories = categories;
+    this.products = products;
+  }
 
   /** Arbre public : catégories racines actives et leurs sous-catégories actives. */
   public List<CategoryResponse> publicTree() {
@@ -56,17 +62,28 @@ public class CategoryService {
     return CategoryResponse.flat(categories.save(c));
   }
 
-  /** Désactivation logique : la catégorie et ses sous-catégories sont masquées, les produits restent intacts. */
+  /** Suppression définitive : interdite tant que des produits ou des sous-catégories utilisées restent liés. */
   @Transactional
-  public CategoryResponse deactivate(Long id) {
+  public void delete(Long id) {
     var c = find(id);
-    deactivateRecursively(c);
-    return CategoryResponse.flat(c);
+    long used = countProductsInTree(c);
+    if (used > 0) {
+      throw new ConflictException(used == 1
+          ? "Un produit est encore rattaché à « " + c.getName() + " » ou à une sous-catégorie"
+          : used + " produits sont encore rattachés à « " + c.getName() + " » ou à une sous-catégorie");
+    }
+    deleteRecursively(c);
   }
 
-  private void deactivateRecursively(Category c) {
-    c.setActive(false);
-    c.getChildren().forEach(this::deactivateRecursively);
+  private long countProductsInTree(Category c) {
+    long n = products.countByAnyCategory(c.getId());
+    for (Category child : c.getChildren()) n += countProductsInTree(child);
+    return n;
+  }
+
+  private void deleteRecursively(Category c) {
+    new ArrayList<>(c.getChildren()).forEach(this::deleteRecursively);
+    categories.delete(c);
   }
 
   private void apply(Category c, CategoryRequest r) {

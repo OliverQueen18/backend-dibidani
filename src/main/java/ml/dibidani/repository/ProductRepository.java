@@ -44,6 +44,7 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
   long countByVendorId(Long vendorId);
   long countByVendorIdAndActiveTrue(Long vendorId);
+  long countByBrandId(Long brandId);
   long countByActiveTrueAndStock(int stock);
 
   @Query("select count(p) from Product p where p.active = true and p.stock > 0 and p.stock <= p.lowStockThreshold")

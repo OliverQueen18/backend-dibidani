@@ -72,6 +72,8 @@ app:
   cors-origins: ${CORS_ORIGINS:http://localhost:4200,http://localhost,http://localhost:80}
   seed:
     enabled: ${SEED_DEMO_DATA:true}
+  catalog-seed:
+    enabled: ${CATALOG_SEED:true}
   bootstrap-admin:
     email: ${ADMIN_EMAIL:}
     password: ${ADMIN_PASSWORD:}

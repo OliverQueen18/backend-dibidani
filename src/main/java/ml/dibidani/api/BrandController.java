@@ -33,5 +33,6 @@ public class BrandController {
 
   @PreAuthorize("hasAuthority('PERM_CATALOG_MANAGE')")
   @DeleteMapping("/api/v1/admin/brands/{id}")
-  public BrandResponse delete(@PathVariable Long id) { return brands.deactivate(id); }
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void delete(@PathVariable Long id) { brands.delete(id); }
 }

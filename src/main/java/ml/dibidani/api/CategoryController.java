@@ -44,8 +44,8 @@ public class CategoryController {
   @PutMapping("/api/v1/admin/categories/{id}")
   public CategoryResponse update(@PathVariable Long id, @Valid @RequestBody CategoryRequest r) { return categories.update(id, r); }
 
-  /** Désactivation logique (jamais de suppression physique). */
   @PreAuthorize("hasAuthority('PERM_CATALOG_MANAGE')")
   @DeleteMapping("/api/v1/admin/categories/{id}")
-  public CategoryResponse delete(@PathVariable Long id) { return categories.deactivate(id); }
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void delete(@PathVariable Long id) { categories.delete(id); }
 }

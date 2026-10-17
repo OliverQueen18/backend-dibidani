@@ -48,12 +48,17 @@ public class VendorService {
     return toResponse(vendors.save(v));
   }
 
-  /** Désactivation logique : les produits gardent leur vendeur, la page publique du vendeur disparaît. */
+  /** Suppression définitive : interdite tant que des produits restent rattachés. */
   @Transactional
-  public VendorResponse deactivate(Long id) {
+  public void delete(Long id) {
     var v = find(id);
-    v.setActive(false);
-    return toResponse(v);
+    long used = products.countByVendorId(v.getId());
+    if (used > 0) {
+      throw new ConflictException(used == 1
+          ? "Un produit est encore rattaché au vendeur « " + v.getName() + " »"
+          : used + " produits sont encore rattachés au vendeur « " + v.getName() + " »");
+    }
+    vendors.delete(v);
   }
 
   Vendor find(Long id) { return vendors.findById(id).orElseThrow(() -> new NotFoundException("Vendeur introuvable")); }

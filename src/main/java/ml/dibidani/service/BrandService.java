@@ -7,6 +7,7 @@ import ml.dibidani.common.NotFoundException;
 import ml.dibidani.common.Slugs;
 import ml.dibidani.domain.Brand;
 import ml.dibidani.repository.BrandRepository;
+import ml.dibidani.repository.ProductRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -15,8 +16,12 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class BrandService {
   private final BrandRepository brands;
+  private final ProductRepository products;
 
-  public BrandService(BrandRepository brands) { this.brands = brands; }
+  public BrandService(BrandRepository brands, ProductRepository products) {
+    this.brands = brands;
+    this.products = products;
+  }
 
   public List<BrandResponse> publicList() { return brands.findByActiveTrueOrderByNameAsc().stream().map(BrandResponse::of).toList(); }
   public List<BrandResponse> adminList() { return brands.findAllByOrderByNameAsc().stream().map(BrandResponse::of).toList(); }
@@ -38,10 +43,15 @@ public class BrandService {
   }
 
   @Transactional
-  public BrandResponse deactivate(Long id) {
+  public void delete(Long id) {
     var b = find(id);
-    b.setActive(false);
-    return BrandResponse.of(b);
+    long used = products.countByBrandId(b.getId());
+    if (used > 0) {
+      throw new ConflictException(used == 1
+          ? "Un produit est encore rattaché à la marque « " + b.getName() + " »"
+          : used + " produits sont encore rattachés à la marque « " + b.getName() + " »");
+    }
+    brands.delete(b);
   }
 
   Brand find(Long id) { return brands.findById(id).orElseThrow(() -> new NotFoundException("Marque introuvable")); }

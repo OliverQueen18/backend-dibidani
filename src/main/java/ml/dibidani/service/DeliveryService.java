@@ -121,12 +121,17 @@ public class DeliveryService {
     return ZoneResponse.of(z);
   }
 
-  /** Désactivation logique : les commandes passées gardent leur zone. */
+  /** Suppression définitive : interdite tant que des commandes y sont rattachées. */
   @Transactional
-  public ZoneResponse deactivateZone(Long id) {
+  public void deleteZone(Long id) {
     var z = zones.findById(id).orElseThrow(() -> new NotFoundException("Zone introuvable"));
-    z.setActive(false);
-    return ZoneResponse.of(z);
+    long used = orders.countByDeliveryZoneId(z.getId());
+    if (used > 0) {
+      throw new ConflictException(used == 1
+          ? "Une commande est encore rattachée à la zone « " + z.getDistrict() + " »"
+          : used + " commandes sont encore rattachées à la zone « " + z.getDistrict() + " »");
+    }
+    zones.delete(z);
   }
 
   private void applyZone(DeliveryZone z, ZoneRequest r) {

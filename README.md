@@ -42,3 +42,4 @@ CI/CD Jenkins (Docker Hub + VPS) : [docs/JENKINS.md](docs/JENKINS.md). Overlay n
 - Client : `client@dibidani.ml` / `Client123!`
 
 Désactivés en production (`SEED_DEMO_DATA=false`).
+Le référentiel catalogue (catégories, marques, vendeurs, zones, publicités) est chargé même en production, une seule fois.

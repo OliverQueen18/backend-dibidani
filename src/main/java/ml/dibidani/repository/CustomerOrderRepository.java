@@ -31,6 +31,7 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, Lo
   long countByStatus(OrderStatus status);
   long countByStatusIn(Collection<OrderStatus> statuses);
   long countByCreatedAtGreaterThanEqual(Instant from);
+  long countByDeliveryZoneId(Long deliveryZoneId);
 
   @Query("select coalesce(sum(o.total), 0) from CustomerOrder o where o.status in :statuses")
   BigDecimal sumTotalByStatusIn(@Param("statuses") Collection<OrderStatus> statuses);

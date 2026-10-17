@@ -40,5 +40,6 @@ public class VendorController {
 
   @PreAuthorize("hasAuthority('PERM_CATALOG_MANAGE')")
   @DeleteMapping("/api/v1/admin/vendors/{id}")
-  public VendorResponse delete(@PathVariable Long id) { return vendors.deactivate(id); }
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void delete(@PathVariable Long id) { vendors.delete(id); }
 }

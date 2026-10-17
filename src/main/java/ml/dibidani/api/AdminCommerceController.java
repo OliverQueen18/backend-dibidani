@@ -131,7 +131,8 @@ public class AdminCommerceController {
 
   @DeleteMapping("/delivery-zones/{id}")
   @PreAuthorize("hasAuthority('PERM_DELIVERIES_MANAGE')")
-  public ZoneResponse deleteZone(@PathVariable Long id) { return delivery.deactivateZone(id); }
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void deleteZone(@PathVariable Long id) { delivery.deleteZone(id); }
 
   // ---------- Véhicules (Trouver ma pièce) ----------
 
