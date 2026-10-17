@@ -274,16 +274,17 @@ public class ProductImageService {
 
   private void applyGallery(Product p, String url, boolean main) {
     if (url == null || url.isBlank()) return;
-    url = cleanImageUrl(url);
-    if (url.isBlank()) return;
+    final String clean = cleanImageUrl(url);
+    if (clean.isBlank()) return;
     List<String> gallery = currentGallery(p);
-    if (gallery.stream().noneMatch(k -> sameImage(k, url))) {
+    String existing = gallery.stream().filter(k -> sameImage(k, clean)).findFirst().orElse(null);
+    if (existing == null) {
       if (gallery.size() >= 12) throw new IllegalArgumentException("12 images maximum par produit");
-      if (main) gallery.add(0, url);
-      else gallery.add(url);
+      if (main) gallery.add(0, clean);
+      else gallery.add(clean);
     } else if (main) {
-      gallery.remove(url);
-      gallery.add(0, url);
+      gallery.remove(existing);
+      gallery.add(0, existing);
     }
     p.setMainImageUrl(gallery.isEmpty() ? null : gallery.get(0));
     p.getImages().clear();
