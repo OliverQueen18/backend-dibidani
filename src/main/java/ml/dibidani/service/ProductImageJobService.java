@@ -7,8 +7,8 @@ import ml.dibidani.repository.ProductImageAssetRepository;
 import ml.dibidani.repository.ProductImageJobRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.Map;
@@ -29,7 +29,7 @@ public class ProductImageJobService {
     this.json = json;
   }
 
-  @Async("photoStudioExecutor")
+  @Transactional
   public void run(Long jobId) {
     ProductImageJob job = jobs.findWithAsset(jobId).orElse(null);
     if (job == null) return;

@@ -18,7 +18,9 @@ public class ProductImageWatermarkService {
   public ProductImageWatermarkService(PhotoStudioSettingsRepository settings) { this.settings = settings; }
 
   public PhotoStudioSettings current() {
-    return settings.findById(1L).orElseThrow(() -> new NotFoundException("Réglages du studio introuvables"));
+    return settings.findById(1L)
+        .or(() -> settings.findAll().stream().findFirst())
+        .orElseGet(() -> settings.save(new PhotoStudioSettings()));
   }
 
   public Map<String, Object> processOptions(boolean removeBackground, boolean whiteBackground, boolean enhance,
@@ -31,7 +33,7 @@ public class ProductImageWatermarkService {
         Map.entry("removeBackground", removeBackground),
         Map.entry("whiteBackground", whiteBackground),
         Map.entry("enhance", enhance),
-        Map.entry("watermark", watermark && s.isWatermarkEnabled()),
+        Map.entry("watermark", watermark),
         Map.entry("shadow", shadow != null ? shadow : s.isShadowEnabled()),
         Map.entry("fillRatio", clamp(fill, 0.55, 0.92)),
         Map.entry("zoom", clamp(zoom == null ? 1 : zoom, 0.6, 2.2)),

@@ -19,7 +19,8 @@ public record ProductFilter(
     Boolean newArrival,
     Boolean featured,
     String sort,
-    boolean includeInactive) {
+    boolean includeInactive,
+    Boolean active) {
 
   public ProductFilter {
     brandIds = brandIds == null ? List.of() : List.copyOf(brandIds);
@@ -27,16 +28,16 @@ public record ProductFilter(
   }
 
   public static ProductFilter query(String q) {
-    return new ProductFilter(q, null, List.of(), List.of(), null, null, null, null, null, null, null, false);
+    return new ProductFilter(q, null, List.of(), List.of(), null, null, null, null, null, null, null, false, null);
   }
 
   public ProductFilter withCategory(String slug) {
-    return new ProductFilter(q, slug, brandIds, vendors, minPrice, maxPrice, inStock, promo, newArrival, featured, sort, includeInactive);
+    return new ProductFilter(q, slug, brandIds, vendors, minPrice, maxPrice, inStock, promo, newArrival, featured, sort, includeInactive, active);
   }
 
   public ProductFilter withVendor(String slug) {
     List<String> next = slug == null || slug.isBlank() ? List.of() : List.of(slug.trim());
-    return new ProductFilter(q, category, brandIds, next, minPrice, maxPrice, inStock, promo, newArrival, featured, sort, includeInactive);
+    return new ProductFilter(q, category, brandIds, next, minPrice, maxPrice, inStock, promo, newArrival, featured, sort, includeInactive, active);
   }
 
   public boolean hasQuery() { return q != null && !q.isBlank(); }

@@ -87,7 +87,7 @@ public class ProductService {
   public ProductDetail adminGet(Long id) { return adminView(find(id)); }
 
   public PageResponse<ProductSummary> forShop(Vendor shop, String q, int page, int size) {
-    return page(new ProductFilter(q, null, List.of(), List.of(shop.getSlug()), null, null, null, null, null, null, "newest", true), page, size);
+    return page(new ProductFilter(q, null, List.of(), List.of(shop.getSlug()), null, null, null, null, null, null, "newest", true, null), page, size);
   }
 
   public ProductDetail sellerGet(Vendor shop, Long id) { return adminView(owned(shop, id)); }

@@ -14,8 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import tools.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -38,12 +37,13 @@ public class ProductImageService {
   private final PhotoStudioProperties props;
   private final ObjectMapper json;
   private final AuditService audit;
+  private final TransactionTemplate tx;
 
   public ProductImageService(ProductImageAssetRepository assets, ProductImageJobRepository jobs,
                              ProductImageStorageService files, ProductImageWatermarkService watermark,
                              ProductImageJobService jobRunner, ProductImageProcessingService processing,
                              ProductRepository products, AppUserRepository users, VendorRepository vendors,
-                             PhotoStudioProperties props, ObjectMapper json, AuditService audit) {
+                             PhotoStudioProperties props, ObjectMapper json, AuditService audit, TransactionTemplate tx) {
     this.assets = assets;
     this.jobs = jobs;
     this.files = files;
@@ -56,6 +56,7 @@ public class ProductImageService {
     this.props = props;
     this.json = json;
     this.audit = audit;
+    this.tx = tx;
   }
 
   @Transactional
@@ -83,42 +84,41 @@ public class ProductImageService {
     return AssetResponse.of(a);
   }
 
-  @Transactional
   public JobResponse process(Authentication auth, ProcessRequest r) {
     if (r == null || r.assetId() == null) throw new IllegalArgumentException("Photo manquante");
-    long busy = jobs.countByStatusIn(List.of(ProductImageJobStatus.PENDING, ProductImageJobStatus.PROCESSING));
-    if (busy >= 8) throw new TooManyRequestsException("Le studio photo est saturé, réessayez dans un instant");
-    ProductImageAsset asset = assets.findById(r.assetId()).orElseThrow(() -> new NotFoundException("Photo introuvable"));
-    AppUser user = actor(auth);
-    assertCanManageAsset(user, shopOf(user), asset);
-    if (r.productId() != null) {
-      Product p = products.findById(r.productId()).orElseThrow(() -> new NotFoundException("Produit introuvable"));
-      assertCanEditProduct(user, shopOf(user), p);
-      asset.setProduct(p);
-      asset.setVendor(p.getVendor());
-    }
-    var options = watermark.processOptions(
-        r.removeBackground() == null || r.removeBackground(),
-        r.whiteBackground() == null || r.whiteBackground(),
-        r.enhance() == null || r.enhance(),
-        r.watermark() == null || r.watermark(),
-        r.recenter() == null || r.recenter(),
-        r.shadow(), r.fillRatio(), r.zoom(), r.offsetX(), r.offsetY());
-    asset.setParamsJson(json.writeValueAsString(options));
-    assets.save(asset);
-    ProductImageJob job = new ProductImageJob();
-    job.setAsset(asset);
-    job.setStatus(ProductImageJobStatus.PENDING);
-    job.setProgress(0);
-    job.setMessage("En file d’attente");
-    job.setOptionsJson(asset.getParamsJson());
-    job.setCreatedBy(user.getEmail());
-    jobs.saveAndFlush(job);
-    Long jobId = job.getId();
-    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-      @Override public void afterCommit() { jobRunner.run(jobId); }
+    Long jobId = tx.execute(status -> {
+      long busy = jobs.countByStatusIn(List.of(ProductImageJobStatus.PENDING, ProductImageJobStatus.PROCESSING));
+      if (busy >= 8) throw new TooManyRequestsException("Le studio photo est saturé, réessayez dans un instant");
+      ProductImageAsset asset = assets.findById(r.assetId()).orElseThrow(() -> new NotFoundException("Photo introuvable"));
+      AppUser user = actor(auth);
+      assertCanManageAsset(user, shopOf(user), asset);
+      if (r.productId() != null) {
+        Product p = products.findById(r.productId()).orElseThrow(() -> new NotFoundException("Produit introuvable"));
+        assertCanEditProduct(user, shopOf(user), p);
+        asset.setProduct(p);
+        asset.setVendor(p.getVendor());
+      }
+      var options = watermark.processOptions(
+          r.removeBackground() == null || r.removeBackground(),
+          r.whiteBackground() == null || r.whiteBackground(),
+          r.enhance() == null || r.enhance(),
+          r.watermark() == null || r.watermark(),
+          r.recenter() == null || r.recenter(),
+          r.shadow(), r.fillRatio(), r.zoom(), r.offsetX(), r.offsetY());
+      asset.setParamsJson(json.writeValueAsString(options));
+      assets.save(asset);
+      ProductImageJob job = new ProductImageJob();
+      job.setAsset(asset);
+      job.setStatus(ProductImageJobStatus.PENDING);
+      job.setProgress(0);
+      job.setMessage("Traitement en cours…");
+      job.setOptionsJson(asset.getParamsJson());
+      job.setCreatedBy(user.getEmail());
+      jobs.saveAndFlush(job);
+      return job.getId();
     });
-    return JobResponse.of(job);
+    jobRunner.run(jobId);
+    return JobResponse.of(jobs.findWithAsset(jobId).orElseThrow(() -> new NotFoundException("Tâche introuvable")));
   }
 
   @Transactional(readOnly = true)

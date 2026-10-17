@@ -80,7 +80,7 @@ public class VehicleService {
 
   public PageResponse<ProductSummary> compatibleProducts(Long modelId, Long engineId, Integer year, String category, int page, int size) {
     if (modelId == null && engineId == null) throw new IllegalArgumentException("Choisissez au moins un modèle de véhicule");
-    var filter = new ProductFilter(null, category, List.of(), List.of(), null, null, null, null, null, null, null, false);
+    var filter = new ProductFilter(null, category, List.of(), List.of(), null, null, null, null, null, null, null, false, null);
     Specification<Product> spec = ProductSpecs.of(filter, false).and(compatible(modelId, engineId, year));
     var pageable = PageRequest.of(Math.max(0, page), Math.max(1, Math.min(size, 60)), Sort.by(Sort.Order.desc("bestSeller"), Sort.Order.asc("name")));
     return PageResponse.of(products.findAll(spec, pageable).map(ProductSummary::of));

@@ -8,10 +8,10 @@ import java.util.List;
 /** Paramètres de requête du catalogue liés depuis l'URL (les produits inactifs ne sont jamais exposés ici). */
 public record ProductQuery(
     String q, String category, String brand, String vendor, BigDecimal minPrice, BigDecimal maxPrice,
-    Boolean inStock, Boolean promo, Boolean newArrival, Boolean featured, String sort, Integer page, Integer size) {
+    Boolean inStock, Boolean promo, Boolean newArrival, Boolean featured, Boolean active, String sort, Integer page, Integer size) {
 
   public ProductFilter toFilter(boolean includeInactive) {
-    return new ProductFilter(q, category, parseLongs(brand), parseCsv(vendor), minPrice, maxPrice, inStock, promo, newArrival, featured, sort, includeInactive);
+    return new ProductFilter(q, category, parseLongs(brand), parseCsv(vendor), minPrice, maxPrice, inStock, promo, newArrival, featured, sort, includeInactive, active);
   }
 
   public int pageOrDefault() { return page == null ? 0 : page; }

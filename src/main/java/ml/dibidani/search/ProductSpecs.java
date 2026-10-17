@@ -25,7 +25,8 @@ public final class ProductSpecs {
       Join<Product, Vendor> vendor = root.join("vendor", JoinType.LEFT);
 
       List<Predicate> and = new ArrayList<>();
-      if (!f.includeInactive()) and.add(cb.isTrue(root.get("active")));
+      if (f.active() != null) and.add(cb.equal(root.get("active"), f.active()));
+      else if (!f.includeInactive()) and.add(cb.isTrue(root.get("active")));
       if (f.category() != null && !f.category().isBlank()) {
         String slug = f.category().trim();
         and.add(cb.or(cb.equal(category.get("slug"), slug), cb.equal(sub.get("slug"), slug), cb.equal(parent.get("slug"), slug)));

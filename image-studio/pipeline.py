@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from PIL import Image, ImageEnhance, ImageFilter
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
 
 MASTER = 1200
 CATALOG = 600
@@ -38,32 +38,94 @@ def _open(path: Path) -> Image.Image:
     return img.convert("RGB")
 
 
+def _flatten(src: Image.Image) -> Image.Image:
+    """Remplace un fond assez uni (coins similaires) par du blanc."""
+    rgb = src.convert("RGB")
+    w, h = rgb.size
+    corners = [
+        _sample(rgb, 0, 0, 12),
+        _sample(rgb, max(0, w - 12), 0, 12),
+        _sample(rgb, 0, max(0, h - 12), 12),
+        _sample(rgb, max(0, w - 12), max(0, h - 12), 12),
+    ]
+    if _max_spread(corners) > 70:
+        return src
+    bg = tuple(sum(c[i] for c in corners) // 4 for i in range(3))
+    thresh = 42 + min(36, sum(bg) // 24)
+    px = rgb.load()
+    out = Image.new("RGBA", (w, h), (255, 255, 255, 0))
+    dest = out.load()
+    for y in range(h):
+        for x in range(w):
+            p = px[x, y]
+            if _dist(p, bg) <= thresh:
+                dest[x, y] = (255, 255, 255, 0)
+            else:
+                dest[x, y] = (p[0], p[1], p[2], 255)
+    return out
+
+
+def _sample(img: Image.Image, x: int, y: int, size: int) -> tuple[int, int, int]:
+    crop = img.crop((x, y, min(img.width, x + size), min(img.height, y + size)))
+    pixels = [crop.getpixel((i % crop.width, i // crop.width)) for i in range(crop.width * crop.height)]
+    if not pixels:
+        return (255, 255, 255)
+    n = len(pixels)
+    return (sum(p[0] for p in pixels) // n, sum(p[1] for p in pixels) // n, sum(p[2] for p in pixels) // n)
+
+
+def _dist(a: tuple[int, int, int], b: tuple[int, int, int]) -> float:
+    return ((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2) ** 0.5
+
+
+def _max_spread(colors: list[tuple[int, int, int]]) -> float:
+    best = 0.0
+    for i, a in enumerate(colors):
+        for b in colors[i + 1 :]:
+            best = max(best, _dist(a, b))
+    return best
+
+
 def _watermark(canvas: Image.Image, options: dict[str, Any], mark_path: Path | None) -> None:
-    if not mark_path or not mark_path.is_file():
-        return
-    try:
-        mark = Image.open(mark_path).convert("RGBA")
-    except OSError:
-        return
     side = canvas.width
-    size_ratio = _num(options, "watermarkSize", 0.06)
-    margin_ratio = _num(options, "watermarkMargin", 0.025)
-    opacity = max(0.2, min(1.0, _num(options, "watermarkOpacity", 0.65)))
-    tw = max(16, int(side * size_ratio))
-    th = max(1, int(mark.height * (tw / max(1, mark.width))))
-    mark = mark.resize((tw, th), Image.Resampling.LANCZOS)
-    alpha = mark.split()[-1].point(lambda p: int(p * opacity))
-    mark.putalpha(alpha)
+    size_ratio = max(0.11, _num(options, "watermarkSize", 0.11))
+    margin_ratio = _num(options, "watermarkMargin", 0.03)
+    opacity = max(0.35, min(1.0, _num(options, "watermarkOpacity", 0.82)))
+    tw = max(48, int(side * size_ratio))
     margin = int(side * margin_ratio)
     pos = str(options.get("watermarkPosition") or "BOTTOM_RIGHT").upper()
-    x, y = margin, margin
-    if "RIGHT" in pos:
-        x = side - tw - margin
-    elif "CENTER" in pos:
-        x = (side - tw) // 2
-    if "BOTTOM" in pos:
-        y = side - th - margin
-    canvas.paste(mark, (x, y), mark)
+    mark = None
+    if mark_path and mark_path.is_file():
+        try:
+            mark = Image.open(mark_path).convert("RGBA")
+        except OSError:
+            mark = None
+    if mark is not None:
+        th = max(16, int(mark.height * (tw / max(1, mark.width))))
+        mark = mark.resize((tw, th), Image.Resampling.LANCZOS)
+        alpha = mark.split()[-1].point(lambda p: int(p * opacity))
+        mark.putalpha(alpha)
+        x, y = margin, margin
+        if "RIGHT" in pos:
+            x = side - tw - margin
+        elif "CENTER" in pos:
+            x = (side - tw) // 2
+        if "BOTTOM" in pos:
+            y = side - th - margin
+        canvas.paste(mark, (x, y), mark)
+        return
+    draw = ImageDraw.Draw(canvas)
+    try:
+        font = ImageFont.load_default(size=max(22, tw // 3))
+    except TypeError:
+        font = ImageFont.load_default()
+    label = "Dibidani"
+    box = draw.textbbox((0, 0), label, font=font)
+    twt, tht = box[2] - box[0], box[3] - box[1]
+    x = side - twt - margin if "RIGHT" in pos else margin
+    y = side - tht - margin if "BOTTOM" in pos else margin
+    color = (8, 122, 71, int(opacity * 255))
+    draw.text((x, y), label, font=font, fill=color)
 
 
 def _place(src: Image.Image, options: dict[str, Any]) -> Image.Image:
@@ -91,7 +153,12 @@ def _place(src: Image.Image, options: dict[str, Any]) -> Image.Image:
         canvas = canvas.convert("RGBA")
         canvas.paste(shadow, (0, 0), shadow)
         canvas = canvas.convert("RGB")
-    canvas.paste(product, (x, y))
+    if product.mode == "RGBA":
+        canvas = canvas.convert("RGBA")
+        canvas.paste(product, (x, y), product)
+        canvas = canvas.convert("RGB")
+    else:
+        canvas.paste(product, (x, y))
     return canvas
 
 
@@ -114,6 +181,8 @@ def process_image(
 ) -> dict[str, str]:
     options = options or {}
     src = _open(input_path)
+    if _flag(options, "removeBackground") or _flag(options, "whiteBackground"):
+        src = _flatten(src)
     canvas = _place(src, options)
     if _flag(options, "watermark", True):
         _watermark(canvas, options, watermark_path)

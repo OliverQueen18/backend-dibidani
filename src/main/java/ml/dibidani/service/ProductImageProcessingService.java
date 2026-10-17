@@ -77,8 +77,10 @@ public class ProductImageProcessingService {
           "fallback", "local-1",
           "Détourage indisponible : cadrage blanc appliqué. Ajustez manuellement si besoin."
       );
+    } catch (IllegalArgumentException e) {
+      throw e;
     } catch (Exception e) {
-      throw new IllegalStateException("Impossible de traiter cette photo");
+      throw new IllegalStateException(e.getMessage() == null ? "Impossible de traiter cette photo" : e.getMessage(), e);
     }
   }
 
