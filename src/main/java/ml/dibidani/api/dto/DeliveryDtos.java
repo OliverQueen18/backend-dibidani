@@ -48,5 +48,5 @@ public final class DeliveryDtos {
 
   public record DeliveryRow(Long id, Long orderId, String orderNumber, String orderStatus, DeliveryMethod method, DeliveryStatus status,
                             String customerName, String customerPhone, String zone, String address, String courierName, String courierPhone,
-                            BigDecimal total, String paymentMethod, String paymentStatus, Instant createdAt) {}
+                            BigDecimal total, String paymentMethod, String paymentStatus, Instant createdAt, Long courierId, String notes) {}
 }

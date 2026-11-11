@@ -96,6 +96,18 @@ public class UserService {
 
   public List<UserResponse> couriers() { return users.findByRoleAndActiveTrueOrderByFullNameAsc(Role.COURIER).stream().map(UserResponse::of).toList(); }
 
+  @Transactional
+  public UserResponse createCourier(CreateCourierRequest r) {
+    return create(new CreateUserRequest(r.fullName(), r.email(), r.phone(), Role.COURIER, r.password()));
+  }
+
+  @Transactional
+  public UserResponse updateCourier(Long id, UpdateCourierRequest r, String actorEmail) {
+    users.findById(id).filter(u -> u.getRole() == Role.COURIER)
+        .orElseThrow(() -> new NotFoundException("Livreur introuvable"));
+    return update(id, new UpdateUserRequest(r.fullName(), r.phone(), Role.COURIER, r.active(), r.password()), actorEmail);
+  }
+
   public List<RoleResponse> roles() {
     return Arrays.stream(Role.values()).map(r -> new RoleResponse(r, r.label(), r.description(),
         r.permissions().stream().map(p -> p.label()).toList(), users.countByRole(r))).toList();

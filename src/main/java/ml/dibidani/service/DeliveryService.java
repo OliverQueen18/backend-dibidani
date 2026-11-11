@@ -194,6 +194,8 @@ public class DeliveryService {
     var order = orders.findById(orderId).orElseThrow(() -> new NotFoundException("Commande introuvable"));
     if (order.getDeliveryMethod() == DeliveryMethod.PICKUP) throw new ConflictException("Cette commande est à retirer au marché");
     if (!order.getStatus().isOpen()) throw new ConflictException("Cette commande est clôturée");
+    if (r.courierId() == null && Slugs.blankToNull(r.courierName()) == null)
+      throw new IllegalArgumentException("Choisissez un livreur");
     var d = deliveries.findByOrderId(orderId).orElseGet(() -> createFor(order));
     if (r.courierId() != null) {
       var courier = users.findById(r.courierId()).filter(u -> u.getRole() == Role.COURIER && u.isActive())
@@ -207,6 +209,7 @@ public class DeliveryService {
       d.setCourierPhone(Slugs.blankToNull(r.courierPhone()));
     }
     d.setNotes(Slugs.blankToNull(r.notes()));
+    d.setAssignedAt(Instant.now());
     if (d.getCourierName() != null && d.getStatus() == DeliveryStatus.PENDING) {
       d.setStatus(DeliveryStatus.ASSIGNED);
       d.setAssignedAt(Instant.now());
@@ -220,7 +223,8 @@ public class DeliveryService {
       var o = d.getOrder();
       return new DeliveryRow(d.getId(), o.getId(), o.getOrderNumber(), o.getStatus().name(), d.getMethod(), d.getStatus(),
           o.getCustomerName(), o.getCustomerPhone(), o.getDeliveryZoneName() != null ? o.getDeliveryZoneName() : o.getDeliveryDistrict(),
-          o.getDeliveryAddress(), d.getCourierName(), d.getCourierPhone(), o.getTotal(), o.getPaymentMethod(), o.getPaymentStatus().name(), d.getCreatedAt());
+          o.getDeliveryAddress(), d.getCourierName(), d.getCourierPhone(), o.getTotal(), o.getPaymentMethod(), o.getPaymentStatus().name(), d.getCreatedAt(),
+          d.getCourier() == null ? null : d.getCourier().getId(), d.getNotes());
     });
   }
 }

@@ -32,4 +32,16 @@ public final class UserDtos {
       @Size(min = 8, max = 100, message = "8 caractères minimum") String password) {}
 
   public record RoleResponse(Role role, String label, String description, List<String> permissions, long userCount) {}
+
+  public record CreateCourierRequest(
+      @NotBlank @Size(max = 255) String fullName,
+      @NotBlank @Email @Size(max = 255) String email,
+      @NotBlank @Pattern(regexp = PHONE) String phone,
+      @NotBlank @Size(min = 8, max = 100) String password) {}
+
+  public record UpdateCourierRequest(
+      @NotBlank @Size(max = 255) String fullName,
+      @NotBlank @Pattern(regexp = PHONE) String phone,
+      @NotNull Boolean active,
+      @Size(min = 8, max = 100) String password) {}
 }
