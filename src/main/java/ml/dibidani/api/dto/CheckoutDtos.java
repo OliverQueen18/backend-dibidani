@@ -14,7 +14,7 @@ import java.util.List;
 public final class CheckoutDtos {
   private CheckoutDtos() {}
 
-  static final String PHONE = "^\\+?[0-9 ().-]{8,25}$";
+  static final String PHONE = "^\\+?(?=(?:\\D*\\d){8,15}\\D*$)[0-9 ().-]{8,25}$";
 
   public record CustomerStep(
       @NotBlank(message = "Votre nom est obligatoire") @Size(max = 255) String fullName,

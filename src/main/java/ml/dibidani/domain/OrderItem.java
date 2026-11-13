@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 @Table(name = "order_items")
 public class OrderItem extends BaseEntity {
   @ManyToOne(optional = false, fetch = FetchType.LAZY) private CustomerOrder order;
-  @ManyToOne(optional = false, fetch = FetchType.LAZY) private Product product;
+  @ManyToOne(fetch = FetchType.LAZY) private Product product;
   @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "variant_id") private ProductVariant variant;
   @Column(nullable = false) private String productName;
   @Column(nullable = false) private String productSku;

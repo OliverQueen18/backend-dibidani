@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.List;
 
 public interface ProductImageAssetRepository extends JpaRepository<ProductImageAsset, Long> {
+  List<ProductImageAsset> findByProductIsNullAndMasterUrlIn(java.util.Collection<String> urls);
   List<ProductImageAsset> findByProductIdOrderByCreatedAtAsc(Long productId);
   List<ProductImageAsset> findByOwnerIdOrderByCreatedAtDesc(Long ownerId);
   long countByOwnerIdAndCreatedAtGreaterThanEqual(Long ownerId, Instant from);

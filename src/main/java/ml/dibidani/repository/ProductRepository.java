@@ -12,6 +12,10 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
+  @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(value = "delete from products where id = :id", nativeQuery = true)
+  int deletePermanently(@Param("id") Long id);
+
   Optional<Product> findBySlug(String slug);
   Optional<Product> findBySlugAndActiveTrue(String slug);
   Optional<Product> findByIdAndActiveTrue(Long id);

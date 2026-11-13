@@ -41,8 +41,11 @@ services:
       PUBLIC_URL: ${PUBLIC_URL:-http://localhost:4200}
       UPLOADS_DIR: /app/uploads
       PHOTO_STUDIO_URL: http://image-studio:8090
-      PHOTO_STUDIO_ENGINE: ${PHOTO_STUDIO_ENGINE:-local}
-      PHOTO_STUDIO_TOKEN: ${PHOTO_STUDIO_TOKEN:-dibidani-dev-studio}
+      IMAGE_PROCESSING_TIMEOUT: ${IMAGE_PROCESSING_TIMEOUT:-120}
+      MAX_IMAGE_BYTES: ${MAX_IMAGE_BYTES:-10485760}
+      MAX_IMAGE_PIXELS: ${MAX_IMAGE_PIXELS:-20000000}
+      PHOTO_STUDIO_ENGINE: ${PHOTO_STUDIO_ENGINE:-rembg}
+      PHOTO_STUDIO_TOKEN: ${PHOTO_STUDIO_TOKEN:?PHOTO_STUDIO_TOKEN is required}
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
       PAYMENT_MOCK_ENABLED: ${PAYMENT_MOCK_ENABLED:-true}
       PAYMENT_MOCK_WEBHOOK_SECRET: ${PAYMENT_MOCK_WEBHOOK_SECRET:-}
@@ -99,20 +102,48 @@ services:
     image: ${STUDIO_IMAGE:-dibidani-image-studio:local}
     build:
       context: ./image-studio
-    container_name: dibidani-image-studio
+    restart: unless-stopped
     environment:
-      ENGINE: ${PHOTO_STUDIO_ENGINE:-local}
-      SERVICE_TOKEN: ${PHOTO_STUDIO_TOKEN:-dibidani-dev-studio}
+      SERVICE_TOKEN: ${PHOTO_STUDIO_TOKEN:?PHOTO_STUDIO_TOKEN is required}
       UPLOADS_ROOT: /app/uploads
-      WATERMARK_PATH: /app/assets/favicon-dibidani.png
+      U2NET_HOME: /models
+      REMBG_MODEL: ${REMBG_MODEL:-isnet-general-use}
+      REMBG_ALLOWED_MODELS: ${REMBG_ALLOWED_MODELS:-isnet-general-use}
+      REMBG_DEVICE: cpu
+      MAX_LOADED_MODELS: ${MAX_LOADED_MODELS:-1}
+      MAX_CONCURRENCY: ${IMAGE_MAX_CONCURRENCY:-1}
+      MAX_IMAGE_MB: ${MAX_IMAGE_MB:-10}
+      MAX_IMAGE_PIXELS: ${MAX_IMAGE_PIXELS:-20000000}
+      OMP_NUM_THREADS: ${IMAGE_CPU_THREADS:-2}
+      NUMBA_NUM_THREADS: ${IMAGE_CPU_THREADS:-2}
     volumes:
       - dibidani_uploads:/app/uploads
-    ports:
-      - "127.0.0.1:8090:8090"
+      - dibidani_models:/models
+    mem_limit: ${IMAGE_MEMORY_LIMIT:-3g}
+    cpus: ${IMAGE_CPU_LIMIT:-2.0}
     networks:
       - data
 
+  image-models:
+    image: ${STUDIO_IMAGE:-dibidani-image-studio:local}
+    build:
+      context: ./image-studio
+    profiles: [tools]
+    command: [python, -m, app.models]
+    environment:
+      U2NET_HOME: /models
+      REMBG_MODEL: ${REMBG_MODEL:-isnet-general-use}
+      REMBG_ALLOWED_MODELS: ${REMBG_ALLOWED_MODELS:-isnet-general-use}
+      MAX_LOADED_MODELS: ${MAX_LOADED_MODELS:-1}
+      OMP_NUM_THREADS: ${IMAGE_CPU_THREADS:-2}
+    volumes:
+      - dibidani_models:/models
+    networks:
+      - edge
+
+
 volumes:
+  dibidani_models:
   dibidani_pgdata:
   dibidani_uploads:
 

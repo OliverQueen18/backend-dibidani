@@ -18,6 +18,8 @@ import java.util.Set;
 public class ProductImageStorageService {
   private static final Set<String> OK = Set.of("jpg", "jpeg", "png", "webp", "gif", "heic", "heif");
   private final StorageService storage;
+  @org.springframework.beans.factory.annotation.Value("${app.photo-studio.max-pixels:20000000}")
+  private long maxPixels = 20_000_000;
 
   public ProductImageStorageService(StorageService storage) { this.storage = storage; }
 
@@ -25,8 +27,20 @@ public class ProductImageStorageService {
 
   public Stored storeOriginal(MultipartFile file, long maxBytes) throws IOException {
     if (file == null || file.isEmpty()) throw new IllegalArgumentException("Aucun fichier reçu");
-    if (file.getSize() > maxBytes) throw new IllegalArgumentException("Image trop volumineuse (12 Mo maximum)");
+    if (file.getSize() > maxBytes) throw new IllegalArgumentException("Image trop volumineuse (" + maxBytes / 1024 / 1024 + " Mo maximum)");
     Kind kind = sniff(file);
+    int w = 0, h = 0;
+    try (var input = ImageIO.createImageInputStream(file.getInputStream())) {
+      var readers = ImageIO.getImageReaders(input);
+      if (readers.hasNext()) {
+        var reader = readers.next();
+        try {
+          reader.setInput(input); w = reader.getWidth(0); h = reader.getHeight(0);
+          if (w <= 0 || h <= 0 || (long) w * h > maxPixels) throw new IllegalArgumentException("Image trop grande en pixels");
+          reader.read(0); // Decode supported formats before persisting; Python validates WebP/HEIC.
+        } finally { reader.dispose(); }
+      }
+    } catch (IOException e) { throw new IllegalArgumentException("Image corrompue", e); }
     String folder = "private/originals/" + LocalDate.now().toString().substring(0, 7);
     Path dir = safeDir(folder);
     Files.createDirectories(dir);
@@ -34,11 +48,6 @@ public class ProductImageStorageService {
     Path dest = dir.resolve(name);
     byte[] raw = file.getBytes();
     Files.write(dest, raw);
-    int w = 0, h = 0;
-    try (var in = Files.newInputStream(dest)) {
-      BufferedImage img = ImageIO.read(in);
-      if (img != null) { w = img.getWidth(); h = img.getHeight(); }
-    } catch (IOException ignored) {}
     return new Stored(folder + "/" + name, dest, kind.mime, w, h, raw.length, sha256(raw));
   }
 
@@ -88,7 +97,7 @@ public class ProductImageStorageService {
     if (png) return new Kind("png", "image/png");
     if (gif) return new Kind("gif", "image/gif");
     if (webp) return new Kind("webp", "image/webp");
-    if (heic && (declared.endsWith(".heic") || declared.endsWith(".heif") || looksHeic(h))) return new Kind("heic", "image/heic");
+    if (heic && looksHeic(h)) return new Kind("heic", "image/heic");
     throw new IllegalArgumentException("Format accepté : JPEG, PNG, WebP, GIF ou HEIC");
   }
 

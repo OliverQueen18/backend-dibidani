@@ -45,7 +45,7 @@ public final class StockDtos {
     public static MovementResponse of(StockMovement m) {
       var p = m.getProduct();
       var v = m.getVariant();
-      return new MovementResponse(m.getId(), p.getId(), p.getName(), p.getSku(),
+      return new MovementResponse(m.getId(), p == null ? null : p.getId(), p == null ? "Produit supprimé" : p.getName(), p == null ? null : p.getSku(),
           v == null ? null : v.getId(), v == null ? m.getVariantName() : v.getName(),
           m.getType(), m.getType().label(), m.getQuantityBefore(), m.getQuantity(), m.getStockAfter(),
           m.getComment(), m.getReference(), m.getCreatedBy(), m.getCreatedAt());

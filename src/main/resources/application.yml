@@ -85,10 +85,12 @@ app:
     dir: ${UPLOADS_DIR:uploads}
     public-prefix: /uploads
   photo-studio:
-    engine: ${PHOTO_STUDIO_ENGINE:local}
+    engine: ${PHOTO_STUDIO_ENGINE:rembg}
     service-url: ${PHOTO_STUDIO_URL:http://127.0.0.1:8090}
     token: ${PHOTO_STUDIO_TOKEN:}
-    max-bytes: 12582912
+    max-bytes: ${MAX_IMAGE_BYTES:10485760}
+    max-pixels: ${MAX_IMAGE_PIXELS:20000000}
+    timeout-seconds: ${IMAGE_PROCESSING_TIMEOUT:120}
     quota-per-user: ${PHOTO_STUDIO_QUOTA:200}
     supplier-lookup-enabled: ${PHOTO_STUDIO_SUPPLIER_LOOKUP:false}
   shop:

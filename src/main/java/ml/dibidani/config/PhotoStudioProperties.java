@@ -4,7 +4,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "app.photo-studio")
 public class PhotoStudioProperties {
-  private String engine = "local";
+  private String engine = "rembg";
+  private int timeoutSeconds = 120;
+  public int getTimeoutSeconds() { return timeoutSeconds; }
+  public void setTimeoutSeconds(int v) { timeoutSeconds = Math.max(10, Math.min(600, v)); }
   private String serviceUrl = "http://127.0.0.1:8090";
   private String token = "";
   private long maxBytes = 12_582_912;

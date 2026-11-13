@@ -15,7 +15,7 @@ public final class OrderDtos {
   public record Item(@NotNull Long productId, Long variantId, @Min(1) @Max(999) int quantity) {}
   public record CreateOrderRequest(@NotEmpty @Size(max = 100) List<@Valid Item> items, @NotBlank @Size(max = 500) String deliveryAddress,
                                    @Size(max = 255) String deliveryDistrict, Long deliveryZoneId, DeliveryMethod deliveryMethod,
-                                   @NotBlank @Size(max = 50) String customerPhone, @NotBlank @Size(max = 40) String paymentMethod,
+                                   @NotBlank(message = "Votre téléphone est obligatoire") @Pattern(regexp = CheckoutDtos.PHONE, message = "Numéro de téléphone invalide") @Size(max = 50) String customerPhone, @NotBlank @Size(max = 40) String paymentMethod,
                                    @Size(max = 50) String promoCode) {}
 
   /** Nouvelle tentative de paiement en ligne ; method/provider permettent de changer d'opérateur. */
@@ -25,7 +25,7 @@ public final class OrderDtos {
                                   Long variantId, String variantName, Long vendorId, String vendorName,
                                   int quantity, BigDecimal unitPrice, BigDecimal lineTotal) {
     public static OrderItemResponse of(OrderItem i) {
-      return new OrderItemResponse(i.getProduct().getId(), i.getProductName(), i.getProductSku(), i.getProduct().getSlug(), i.getImageUrl(),
+      return new OrderItemResponse(i.getProduct() == null ? null : i.getProduct().getId(), i.getProductName(), i.getProductSku(), i.getProduct() == null ? null : i.getProduct().getSlug(), i.getImageUrl(),
           i.getVariant() == null ? null : i.getVariant().getId(), i.getVariantName(), i.getVendorId(), i.getVendorName(),
           i.getQuantity(), i.getUnitPrice(), i.getLineTotal());
     }

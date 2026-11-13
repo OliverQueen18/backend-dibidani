@@ -94,6 +94,7 @@ public class OrderWorkflow {
   private void releaseStock(CustomerOrder o, StockMovementType type, String by) {
     if (o.isStockReleased()) return;
     for (OrderItem i : o.getItems()) {
+      if (i.getProduct() == null) continue;
       stock.move(i.getProduct(), i.getVariant(), type, i.getQuantity(),
           type == StockMovementType.CANCELLATION ? "Annulation de commande" : "Retour de commande", o.getOrderNumber(), by);
     }

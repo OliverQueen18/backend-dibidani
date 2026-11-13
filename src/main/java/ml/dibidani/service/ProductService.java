@@ -39,9 +39,11 @@ public class ProductService {
   private final SearchProvider search;
   private final VehicleService vehicles;
   private final StockService stock;
+  private final ml.dibidani.repository.ProductImageAssetRepository imageAssets;
 
   public ProductService(ProductRepository products, ProductVariantRepository variants, CategoryRepository categories, CategoryService categoryService,
-                        BrandService brandService, VendorService vendorService, SearchProvider search, VehicleService vehicles, StockService stock) {
+                        BrandService brandService, VendorService vendorService, SearchProvider search, VehicleService vehicles, StockService stock,
+                        ml.dibidani.repository.ProductImageAssetRepository imageAssets) {
     this.products = products;
     this.variants = variants;
     this.categories = categories;
@@ -51,6 +53,7 @@ public class ProductService {
     this.search = search;
     this.vehicles = vehicles;
     this.stock = stock;
+    this.imageAssets = imageAssets;
   }
 
   public PageResponse<ProductSummary> page(ProductFilter filter, int page, int size) {
@@ -83,6 +86,11 @@ public class ProductService {
   public List<ProductSummary> latest(int limit) { return summaries(products.findByActiveTrueOrderByNewArrivalDescCreatedAtDesc(limit(limit))); }
   public List<ProductSummary> bestSellers(int limit) { return summaries(products.findByBestSellerTrueAndActiveTrueOrderByCreatedAtDesc(limit(limit))); }
   public List<ProductSummary> forCategory(Long categoryId, int limit) { return summaries(products.findForCategory(categoryId, limit(limit))); }
+
+  @Transactional
+  public void deletePermanently(Long id) {
+    if (products.deletePermanently(id) == 0) throw new NotFoundException("Produit introuvable");
+  }
 
   public ProductDetail adminGet(Long id) { return adminView(find(id)); }
 
@@ -141,6 +149,7 @@ public class ProductService {
     var p = new Product();
     apply(p, r);
     p = products.save(p);
+    attachDraftImages(p, by);
     vehicles.replaceCompatibilities(p, r.compatibilities());
     if (p.getStock() > 0) stock.log(p, null, ml.dibidani.domain.StockMovementType.PURCHASE, 0, p.getStock(), p.getStock(), "Stock initial", p.getSku(), by);
     return adminView(p);
@@ -154,6 +163,7 @@ public class ProductService {
         .collect(java.util.stream.Collectors.toMap(ProductVariant::getId, ProductVariant::getStock));
     apply(p, r);
     p = products.save(p);
+    attachDraftImages(p, by);
     vehicles.replaceCompatibilities(p, r.compatibilities());
     for (ProductVariant v : p.getVariants()) {
       int before = v.getId() == null ? 0 : variantBefore.getOrDefault(v.getId(), 0);
@@ -254,6 +264,20 @@ public class ProductService {
     if (n.endsWith(" (copie)")) return n;
     if (n.length() > 245) n = n.substring(0, 245).trim();
     return n + " (copie)";
+  }
+
+  void attachDraftImages(Product product, String actorEmail) {
+    if (actorEmail == null || product.getImages().isEmpty()) return;
+    for (var asset : imageAssets.findByProductIsNullAndMasterUrlIn(product.getImages())) {
+      if (asset.getProduct() != null || asset.getOwner() == null
+          || !actorEmail.equalsIgnoreCase(asset.getOwner().getEmail())) continue;
+      if (asset.getStatus() != ml.dibidani.domain.ProductImageStatus.PROCESSED
+          && asset.getStatus() != ml.dibidani.domain.ProductImageStatus.CONFIRMED) continue;
+      asset.setProduct(product);
+      asset.setVendor(product.getVendor());
+      asset.setConfirmed(true);
+      asset.setStatus(ml.dibidani.domain.ProductImageStatus.CONFIRMED);
+    }
   }
 
   private void apply(Product p, ProductRequest r) {

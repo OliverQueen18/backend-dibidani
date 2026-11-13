@@ -15,3 +15,8 @@ services:
       PAYMENT_MOCK_ENABLED: "false"
       CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required in production}
       PUBLIC_URL: ${PUBLIC_URL:?PUBLIC_URL is required in production}
+
+  image-studio:
+    environment:
+      STUDIO_ENV: production
+      MODEL_LICENSE_APPROVALS: ${MODEL_LICENSE_APPROVALS:?Document model weight licences before commercial deployment}

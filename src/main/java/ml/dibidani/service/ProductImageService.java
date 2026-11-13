@@ -88,23 +88,28 @@ public class ProductImageService {
     if (r == null || r.assetId() == null) throw new IllegalArgumentException("Photo manquante");
     Long jobId = tx.execute(status -> {
       long busy = jobs.countByStatusIn(List.of(ProductImageJobStatus.PENDING, ProductImageJobStatus.PROCESSING));
-      if (busy >= 8) throw new TooManyRequestsException("Le studio photo est saturé, réessayez dans un instant");
+      if (busy >= 24) throw new TooManyRequestsException("Le studio photo est saturé, réessayez dans un instant");
       ProductImageAsset asset = assets.findById(r.assetId()).orElseThrow(() -> new NotFoundException("Photo introuvable"));
       AppUser user = actor(auth);
       assertCanManageAsset(user, shopOf(user), asset);
+      jobs.findFirstByAssetIdOrderByCreatedAtDesc(asset.getId()).ifPresent(previous -> {
+        if (previous.getStatus() == ProductImageJobStatus.PENDING || previous.getStatus() == ProductImageJobStatus.PROCESSING)
+          throw new ml.dibidani.common.ConflictException("Cette photo est déjà en traitement");
+      });
       if (r.productId() != null) {
         Product p = products.findById(r.productId()).orElseThrow(() -> new NotFoundException("Produit introuvable"));
         assertCanEditProduct(user, shopOf(user), p);
         asset.setProduct(p);
         asset.setVendor(p.getVendor());
       }
-      var options = watermark.processOptions(
+      var options = new java.util.HashMap<>(watermark.processOptions(
           r.removeBackground() == null || r.removeBackground(),
           r.whiteBackground() == null || r.whiteBackground(),
-          r.enhance() == null || r.enhance(),
-          r.watermark() == null || r.watermark(),
+          Boolean.TRUE.equals(r.enhance()),
+          Boolean.TRUE.equals(r.watermark()),
           r.recenter() == null || r.recenter(),
-          r.shadow(), r.fillRatio(), r.zoom(), r.offsetX(), r.offsetY());
+          r.shadow(), r.fillRatio(), r.zoom(), r.offsetX(), r.offsetY()));
+      PhotoProcessOptions.apply(options, r);
       asset.setParamsJson(json.writeValueAsString(options));
       assets.save(asset);
       ProductImageJob job = new ProductImageJob();
@@ -117,8 +122,8 @@ public class ProductImageService {
       jobs.saveAndFlush(job);
       return job.getId();
     });
-    jobRunner.run(jobId);
-    return JobResponse.of(jobs.findWithAsset(jobId).orElseThrow(() -> new NotFoundException("Tâche introuvable")));
+    // The dedicated scheduler consumes the durable queue after this transaction commits.
+    return tx.execute(status -> JobResponse.of(jobs.findWithAsset(jobId).orElseThrow(() -> new NotFoundException("Tâche introuvable"))));
   }
 
   @Transactional(readOnly = true)
@@ -136,6 +141,8 @@ public class ProductImageService {
     if (asset.getMasterUrl() == null && asset.getJpegUrl() == null) {
       throw new IllegalArgumentException("Traitez la photo avant de l’enregistrer");
     }
+    if (asset.getStatus() != ProductImageStatus.PROCESSED && asset.getStatus() != ProductImageStatus.CONFIRMED)
+      throw new IllegalArgumentException("Attendez un traitement réussi avant d’enregistrer la photo");
     Long productId = r == null ? null : r.productId();
     if (productId != null) {
       Product p = products.findById(productId).orElseThrow(() -> new NotFoundException("Produit introuvable"));

@@ -18,8 +18,31 @@ import java.util.List;
 @RestController
 public class ProductPhotoStudioController {
   private final ProductImageService studio;
+  private final ml.dibidani.service.ProductImageProcessingService processing;
 
-  public ProductPhotoStudioController(ProductImageService studio) { this.studio = studio; }
+  public ProductPhotoStudioController(ProductImageService studio, ml.dibidani.service.ProductImageProcessingService processing) { this.studio = studio; this.processing = processing; }
+
+  @GetMapping({"/api/v1/products/images/models", "/api/images/models"})
+  @PreAuthorize("hasAuthority('PERM_CATALOG_MANAGE') or hasRole('SELLER')")
+  public java.util.Map<?, ?> models() { return processing.models(); }
+
+  @PostMapping({"/api/images/batch-process", "/api/v1/products/images/batch-process"})
+  @PreAuthorize("hasAuthority('PERM_CATALOG_MANAGE') or hasRole('SELLER')")
+  @ResponseStatus(HttpStatus.ACCEPTED)
+  public List<BatchItem> batch(Authentication a, @RequestBody BatchRequest body) {
+    if (body.images() == null || body.images().isEmpty() || body.images().size() > 12) throw new IllegalArgumentException("Sélectionnez de 1 à 12 images");
+    return body.images().stream().map(r -> {
+      try { return new BatchItem(r.assetId(), studio.process(a, r), null); }
+      catch (RuntimeException e) { return new BatchItem(r == null ? null : r.assetId(), null, "Photo refusée, déjà en traitement ou file pleine. Réessayez."); }
+    }).toList();
+  }
+
+  @PostMapping("/api/products/{id}/images/processed")
+  @PreAuthorize("hasAuthority('PERM_CATALOG_MANAGE') or hasRole('SELLER')")
+  public AssetResponse attach(Authentication a, @PathVariable Long id, @RequestParam Long assetId,
+                              @RequestParam(defaultValue="false") boolean main) {
+    return studio.confirm(a, assetId, new ConfirmRequest(id, main));
+  }
 
   @PostMapping(value = "/api/v1/products/images/upload", consumes = "multipart/form-data")
   @PreAuthorize("hasAuthority('PERM_CATALOG_MANAGE') or hasRole('SELLER')")
@@ -29,14 +52,24 @@ public class ProductPhotoStudioController {
     return studio.upload(a, file, productId);
   }
 
-  @PostMapping("/api/v1/products/images/process")
+  @PostMapping({"/api/v1/products/images/process", "/api/images/process"})
   @PreAuthorize("hasAuthority('PERM_CATALOG_MANAGE') or hasRole('SELLER')")
   @ResponseStatus(HttpStatus.ACCEPTED)
   public JobResponse process(Authentication a, @RequestBody ProcessRequest body) {
     return studio.process(a, body);
   }
 
-  @GetMapping("/api/v1/products/images/jobs/{id}")
+  @PostMapping("/api/images/remove-background")
+  @PreAuthorize("hasAuthority('PERM_CATALOG_MANAGE') or hasRole('SELLER')")
+  @ResponseStatus(HttpStatus.ACCEPTED)
+  public JobResponse removeBackground(Authentication a, @RequestBody ProcessRequest r) {
+    return studio.process(a, new ProcessRequest(r.assetId(), r.productId(), true,
+        r.whiteBackground(), r.enhance(), r.watermark(), r.recenter(), r.shadow(), r.fillRatio(),
+        r.zoom(), r.offsetX(), r.offsetY(), r.model(), r.background(), r.backgroundColor(), r.format(),
+        r.width(), r.height(), r.quality(), r.refineEdges(), r.rotation(), r.brightness(), r.contrast()));
+  }
+
+  @GetMapping({"/api/v1/products/images/jobs/{id}", "/api/images/jobs/{id}"})
   @PreAuthorize("hasAuthority('PERM_CATALOG_MANAGE') or hasRole('SELLER')")
   public JobResponse job(Authentication a, @PathVariable Long id) {
     return studio.job(a, id);

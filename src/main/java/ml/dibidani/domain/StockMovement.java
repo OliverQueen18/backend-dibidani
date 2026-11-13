@@ -6,7 +6,7 @@ import jakarta.persistence.*;
 @Entity
 @Table(name = "stock_movements")
 public class StockMovement extends BaseEntity {
-  @ManyToOne(optional = false, fetch = FetchType.LAZY) private Product product;
+  @ManyToOne(fetch = FetchType.LAZY) private Product product;
   @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "variant_id") private ProductVariant variant;
   private String variantName;
   @Enumerated(EnumType.STRING) @Column(nullable = false) private StockMovementType type;

@@ -88,6 +88,11 @@ public class ProductController {
   @GetMapping("/api/v1/products/{id:\\d+}/compatibilities")
   public List<CompatibilityResponse> compatibilities(@PathVariable Long id) { return vehicles.forProduct(products.publicById(id).id()); }
 
+  @PreAuthorize("hasRole('ADMIN')")
+  @DeleteMapping("/api/v1/admin/products/{id}/permanent")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void deletePermanently(@PathVariable Long id) { products.deletePermanently(id); }
+
   /** Désactivation logique : les commandes passées conservent leur produit. */
   @PreAuthorize("hasAuthority('PERM_CATALOG_MANAGE')")
   @DeleteMapping("/api/v1/admin/products/{id}")

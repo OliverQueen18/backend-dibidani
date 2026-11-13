@@ -15,6 +15,21 @@ public class ProductImageAsset extends BaseEntity {
   private Integer originalWidth;
   private Integer originalHeight;
   private Integer originalBytes;
+  private String model;
+  private String outputFormat;
+  private Integer outputWidth;
+  private Integer outputHeight;
+  private Long outputBytes;
+  public String getModel() { return model; }
+  public void setModel(String v) { model = v; }
+  public String getOutputFormat() { return outputFormat; }
+  public void setOutputFormat(String v) { outputFormat = v; }
+  public Integer getOutputWidth() { return outputWidth; }
+  public void setOutputWidth(Integer v) { outputWidth = v; }
+  public Integer getOutputHeight() { return outputHeight; }
+  public void setOutputHeight(Integer v) { outputHeight = v; }
+  public Long getOutputBytes() { return outputBytes; }
+  public void setOutputBytes(Long v) { outputBytes = v; }
   @Column(length = 64) private String sha256;
   @Column(length = 500) private String masterUrl;
   @Column(length = 500) private String catalogUrl;

@@ -55,6 +55,7 @@ public class OrderService {
    */
   @Transactional
   public CustomerOrder place(PlaceCommand c) {
+    if (c.customerPhone() == null || !c.customerPhone().trim().matches("^\\+?(?=(?:\\D*\\d){8,15}\\D*$)[0-9 ().-]{8,25}$")) throw new IllegalArgumentException("Renseignez un numéro de téléphone valide");
     if (c.lines().isEmpty()) throw new IllegalArgumentException("Votre panier est vide");
 
     var priced = pricing.price(c.lines(), null, c.zone() == null ? null : c.zone().getId(), c.deliveryMethod());

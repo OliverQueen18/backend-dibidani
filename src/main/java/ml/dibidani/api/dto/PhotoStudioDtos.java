@@ -21,7 +21,13 @@ public final class PhotoStudioDtos {
       Double fillRatio,
       Double zoom,
       Double offsetX,
-      Double offsetY) {}
+      Double offsetY,
+      String model, String background, String backgroundColor, String format,
+      Integer width, Integer height, Integer quality, Boolean refineEdges,
+      Integer rotation, Double brightness, Double contrast) {}
+
+  public record BatchRequest(List<ProcessRequest> images) {}
+  public record BatchItem(Long assetId, JobResponse job, String error) {}
 
   public record ConfirmRequest(Long productId, boolean main) {}
 
@@ -45,7 +51,8 @@ public final class PhotoStudioDtos {
       String status, boolean confirmed,
       String masterUrl, String catalogUrl, String thumbUrl, String jpegUrl,
       String originalMime, Integer originalWidth, Integer originalHeight, Integer originalBytes,
-      String engine, String processingVersion, Instant createdAt) {
+      String engine, String processingVersion, Instant createdAt,
+      String model, String format, Integer width, Integer height, Long bytes) {
     public static AssetResponse of(ProductImageAsset a) {
       return new AssetResponse(
           a.getId(),
@@ -54,7 +61,8 @@ public final class PhotoStudioDtos {
           a.getStatus().name(), a.isConfirmed(),
           a.getMasterUrl(), a.getCatalogUrl(), a.getThumbUrl(), a.getJpegUrl(),
           a.getOriginalMime(), a.getOriginalWidth(), a.getOriginalHeight(), a.getOriginalBytes(),
-          a.getEngine(), a.getProcessingVersion(), a.getCreatedAt());
+          a.getEngine(), a.getProcessingVersion(), a.getCreatedAt(),
+          a.getModel(), a.getOutputFormat(), a.getOutputWidth(), a.getOutputHeight(), a.getOutputBytes());
     }
   }
 
